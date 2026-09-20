@@ -1999,7 +1999,7 @@ function renderGame() {
     Math.max(0, Math.ceil((0.6 - share) * E().totalLand(state))) +
     " / 文化 " +
     (clan ? clan.culture : 0) +
-    '/99（高いほどお恵みが寄る）</div>' +
+    "/99</div>" +
     '<div class="row" style="margin-top:6px;justify-content:flex-end">' +
     '<button class="btn ghost" id="btn-help">遊び方</button>' +
     '<button class="btn ghost" id="btn-records">戦績</button>' +
