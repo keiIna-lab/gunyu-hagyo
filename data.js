@@ -187,7 +187,7 @@ window.GY_DATA = (function () {
       { id: "sp-kisaku", name: "奇策", desc: "知略任せの賭け。大きく当たるか、外れる。", cost: { gold: 60 }, target: "none" }
     ],
     culture: [
-      { id: "cul-cha", name: "茶の湯", desc: "茶会を開き、魅力と外交を高める。文化は国土六割に並ぶほど上がりにくい。", cost: { gold: 50 }, target: "none" },
+      { id: "cul-cha", name: "茶の湯", desc: "茶会を開き、魅力と外交を高める。文化はゆっくり積もり、高いほどお恵みが寄りやすい。", cost: { gold: 50 }, target: "none" },
       { id: "cul-noh", name: "能楽興行", desc: "能を舞い、民衆と文化を満たす。", cost: { gold: 60, rice: 20 }, target: "none" },
       { id: "cul-jiin", name: "寺社建立", desc: "寺社を建て、民心と天災耐性を得る。", cost: { gold: 140, rice: 40 }, target: "province" },
       { id: "cul-gakumon", name: "学問奨励", desc: "学を勧め、知略ある士を育てる。", cost: { gold: 70 }, target: "none" },
@@ -938,7 +938,7 @@ window.GY_DATA = (function () {
     QUEUE_TURNS: 100,
     MAX_CMD_PER_TURN: 3,
     WIN_RATIO: 0.6,
-    CULTURE_WIN: 99,
+    CULTURE_MAX: 99,
     SEAT_COUNT: 6,
     MAX_RECORD_PLAYERS: 50,
     MAX_RECORDS: 100,

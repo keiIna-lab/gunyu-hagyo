@@ -54,12 +54,6 @@ button { cursor: pointer; }
   letter-spacing: 0.42em;
   margin: 0 0 18px;
 }
-.blurb {
-  max-width: 640px;
-  margin: 0 auto 28px;
-  line-height: 1.8;
-  color: #ead9b0;
-}
 
 .panel {
   background: var(--panel);
@@ -431,7 +425,7 @@ button { cursor: pointer; }
 .gen-side .btn { min-width: 4.6em; }
 .intro-head {
   display: grid;
-  grid-template-columns: 48px 1fr;
+  grid-template-columns: 44px 1fr;
   gap: 10px;
   align-items: center;
   margin-bottom: 10px;
@@ -469,7 +463,6 @@ button { cursor: pointer; }
   border-top: 1px solid var(--line);
   flex-shrink: 0;
 }
-.gen.tall { align-items: start; }
 .gen-actions { margin-top: 4px; }
 .gen-actions .field { min-width: 90px; }
 .stash-row {
@@ -508,20 +501,43 @@ button { cursor: pointer; }
   color: var(--gold);
   font-size: 1.25rem;
 }
-.roster-meta { margin: 8px 0 4px; color: #ead9b0; }
 .title-gen-list {
   max-height: min(52vh, 520px);
 }
 .gen-list { max-height: 360px; overflow: auto; }
 .gen {
   display: grid;
-  grid-template-columns: 48px 1fr auto;
+  grid-template-columns: 44px 1fr auto;
   gap: 8px;
   align-items: center;
   padding: 6px;
   border-bottom: 1px solid rgba(212,180,90,.12);
 }
-.portrait { width: 48px; height: 48px; }
+.gen-icon {
+  width: 44px;
+  height: 44px;
+  display: block;
+  flex-shrink: 0;
+}
+.gen-icon .portrait,
+.portrait {
+  width: 44px;
+  height: 44px;
+  display: block;
+  border-radius: 8px;
+  object-fit: cover;
+  object-position: 50% 12%;
+  background: #16110c;
+}
+.portrait.rare-port {
+  outline: 1px solid #f0d078;
+}
+.portrait.famous-port {
+  outline: 1px solid rgba(230, 195, 106, 0.85);
+}
+.gen-body { min-width: 0; }
+.gen.tall { align-items: start; }
+.gen.tall .gen-icon { margin-top: 2px; }
 .rare { color: #ffd36a; }
 .search {
   width: 100%;

@@ -818,10 +818,72 @@ window.GYEngine = (function () {
     return state.seats;
   }
 
+  function cultureMax() {
+    return D().CULTURE_MAX || 99;
+  }
+
+  function cultureLuck(culture) {
+    return clamp((culture || 0) / cultureMax(), 0, 1);
+  }
+
+  function eventPickWeight(ev, luck) {
+    const w = ev && ev.weight ? ev.weight : 1;
+    if (ev && ev.kind === "disaster") return w * (1 - 0.45 * luck);
+    return w * (1 + 0.7 * luck);
+  }
+
+  function debugCultureEvents(n, culture, seed) {
+    const rand = rng(seed || 1);
+    const luck = cultureLuck(culture);
+    const events = D().events || [];
+    let fire = 0;
+    let good = 0;
+    let bad = 0;
+    let dodge = 0;
+    for (let i = 0; i < n; i++) {
+      if (rand() > 0.11) continue;
+      fire += 1;
+      const ev = weightedPick(rand, events, (e) => eventPickWeight(e, luck));
+      if (ev && ev.kind === "disaster") {
+        if (rand() < luck * 0.12) dodge += 1;
+        else bad += 1;
+      } else {
+        good += 1;
+      }
+    }
+    return {
+      n: n,
+      culture: culture,
+      luck: luck,
+      fire: fire,
+      good: good,
+      bad: bad,
+      dodge: dodge,
+      goodRate: n ? good / n : 0,
+      badRate: n ? bad / n : 0
+    };
+  }
+
+  function weightedPick(rand, items, weightFn) {
+    let total = 0;
+    const ws = items.map((item) => {
+      const w = Math.max(0, weightFn(item));
+      total += w;
+      return w;
+    });
+    if (total <= 0) return pick(rand, items);
+    let r = rand() * total;
+    for (let i = 0; i < items.length; i++) {
+      r -= ws[i];
+      if (r <= 0) return items[i];
+    }
+    return items[items.length - 1];
+  }
+
   function clanRankScore(state, clan, tot) {
     if (!clan) return 0;
     const landNeed = D().WIN_RATIO || 0.6;
-    const cultNeed = D().CULTURE_WIN || 99;
+    const cultNeed = cultureMax();
     const landPart = tot ? landOf(state, clan.id) / tot / landNeed : 0;
     const cultPart = (clan.culture || 0) / cultNeed;
     return Math.round((landPart + cultPart) * 1000) / 1000;
@@ -1318,7 +1380,7 @@ window.GYEngine = (function () {
         grantTreasure(state, c, rand, "consumable");
       }
     });
-    log(state, "永禄三年、六十余州に群雄が起つ。国土の六割、あるいは文化度99で天下人となる。文化は国土六割に並ぶほど積もりにくい。", "system");
+    log(state, "永禄三年、六十余州に群雄が起つ。国土の六割を制した家が天下人となる。文化はお恵みや来訪を寄せる。", "system");
     return state;
   }
 
@@ -1331,7 +1393,7 @@ window.GYEngine = (function () {
     state.clans.forEach((c) => {
       c.people = clanProvinces(state, c.id).reduce((s, p) => s + p.pop, 0);
       c.alive = clanProvinces(state, c.id).length > 0;
-      c.culture = clamp(c.culture || 0, 0, D().CULTURE_WIN);
+      c.culture = clamp(c.culture || 0, 0, cultureMax());
       ensureTroops(c);
       state.clanById[c.id] = c;
     });
@@ -1402,7 +1464,7 @@ window.GYEngine = (function () {
     const p = clamp((chance || 0) + (charm || 0) / 900, 0.04, 0.48);
     if (!successRoll(rand, p)) return 0;
     const before = clan.culture || 0;
-    clan.culture = clamp(before + 1, 0, D().CULTURE_WIN);
+    clan.culture = clamp(before + 1, 0, cultureMax());
     return clan.culture > before ? 1 : 0;
   }
 
@@ -2055,7 +2117,7 @@ window.GYEngine = (function () {
       c.gold = Math.min(c.cap, c.gold + gold + cult + nDom * 10 + (relics.gold || 0));
       c.people = ps.reduce((s, p) => s + p.pop, 0);
       c.train = Math.min(6, c.train + nMil * 0.015);
-      c.culture = clamp((c.culture || 0) + culTick, 0, D().CULTURE_WIN);
+      c.culture = clamp((c.culture || 0) + culTick, 0, cultureMax());
       if (relics.honor) c.honor = clamp((c.honor || 0) + relics.honor, 0, 120);
       ensureTroops(c);
       const upkeep = Math.floor(
@@ -2075,17 +2137,16 @@ window.GYEngine = (function () {
     if (state.winner) return;
     const rand = randRef(state);
     if (rand() > 0.11) return;
-    const pool = [];
-    D().events.forEach((e) => {
-      for (let i = 0; i < e.weight; i++) pool.push(e);
-    });
-    const ev = pick(rand, pool);
     const alive = state.clans.filter((c) => c.alive);
-    const clan = pick(rand, alive);
+    if (!alive.length) return;
+    const clan = weightedPick(rand, alive, (c) => 1 + 1.15 * cultureLuck(c.culture));
     if (!clan) return;
+    const luck = cultureLuck(clan.culture);
+    const ev = weightedPick(rand, D().events, (e) => eventPickWeight(e, luck));
+    if (!ev) return;
     const ps = clanProvinces(state, clan.id);
     const prov = ps.length ? pick(rand, ps) : null;
-    const resist = clan.disasterResist * 0.04 + relicMods(clan).resist * 0.05;
+    const resist = clan.disasterResist * 0.04 + relicMods(clan).resist * 0.05 + luck * 0.12;
     const geniusBonus = generalsOf(state, clan.id).some((g) => g.skill === "仙術");
     const doctor = generalsOf(state, clan.id).some((g) => g.skill === "医聖");
 
@@ -2429,12 +2490,9 @@ window.GYEngine = (function () {
     if (state.winner) return;
     const tot = totalLand(state);
     const need = D().WIN_RATIO;
-    const cultNeed = D().CULTURE_WIN || 99;
     state.clans.forEach((c) => {
       if (state.winner || !c.alive) return;
-      if (c.culture >= cultNeed) {
-        state.winner = { clanId: c.id, name: c.name, share: landOf(state, c.id) / tot, why: "culture" };
-      } else if (landOf(state, c.id) / tot >= need) {
+      if (tot && landOf(state, c.id) / tot >= need) {
         state.winner = { clanId: c.id, name: c.name, share: landOf(state, c.id) / tot, why: "land" };
       }
     });
@@ -2446,18 +2504,14 @@ window.GYEngine = (function () {
     const standings = buildStandings(state);
     state.standings = standings;
     state.winner.standings = standings;
-    const cultNeed = D().CULTURE_WIN || 99;
     const humanWin = (state.players || []).some((p) => p.clanId === state.winner.clanId);
-    const byCulture = state.winner.why === "culture";
     const byWander = state.winner.why === "wander";
     const byEnd = state.winner.why === "endwar";
     const feat = byWander
       ? "群雄が家を捨てたあと首位となり"
       : byEnd
         ? "この時点の国土と文化度で首位となり"
-        : byCulture
-          ? "文化度" + cultNeed + "に達し"
-          : "国土の六割を制し";
+        : "国土の六割を制し";
     const rankLine = standings
       .map((s) => rankLabel(s.rank) + s.clanName + (s.playerName ? "（" + s.playerName + "）" : ""))
       .join("、");
@@ -2648,21 +2702,34 @@ window.GYEngine = (function () {
       }
     }
     const hadWin = !!state.winner;
+    if (!state.turnEndsAt) {
+      state.turnEndsAt = now + ms;
+      return 0;
+    }
+    let due = 0;
+    let t = state.turnEndsAt || 0;
+    while (due < max && now >= t) {
+      due += 1;
+      t += ms;
+    }
     let n = 0;
-    while (!state.winner && n < max && Date.now() >= (state.turnEndsAt || 0)) {
-      resolveTurn(state, { keepClock: true, catchUp: true });
+    while (!state.winner && n < due) {
+      const suppress = due > 1 && n < due - 1;
+      resolveTurn(state, { keepClock: true, catchUp: suppress });
       n += 1;
     }
     if (n >= max && !state.winner && Date.now() >= (state.turnEndsAt || 0)) {
       state.turnEndsAt = Date.now() + ms;
     }
     if (n) {
-      state.awayTurns = (state.awayTurns || 0) + n;
-      log(state, "不在のあいだに" + n + "期が進んだ。", "system");
-      if (state.winner && !hadWin) state.awayEnded = true;
-      if (!state.winner && state.pendingTalent) {
-        state.popup = state.pendingTalent;
-        state.pendingTalent = null;
+      if (due > 1) {
+        state.awayTurns = (state.awayTurns || 0) + n;
+        log(state, "不在のあいだに" + n + "期が進んだ。", "system");
+        if (state.winner && !hadWin) state.awayEnded = true;
+        if (!state.winner && state.pendingTalent) {
+          state.popup = state.pendingTalent;
+          state.pendingTalent = null;
+        }
       }
     }
     return n;
@@ -2905,6 +2972,9 @@ window.GYEngine = (function () {
     catchUpTurns,
     hasSave,
     isTalentPopup,
+    cultureLuck,
+    eventPickWeight,
+    debugCultureEvents,
     buildStandings,
     rankLabel,
     finishWin,

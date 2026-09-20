@@ -89,21 +89,762 @@ function myClan() {
   return p ? state.clanById[p.clanId] : null;
 }
 
-function portraitSVG(g) {
-  const hue = g.rare ? 42 : ((g.name.charCodeAt(0) || 1) * 17 + (g.name.charCodeAt(1) || g.name.charCodeAt(0) || 1) * 9) % 360;
-  const fill = g.rare ? "#c9a227" : "hsl(" + hue + ",40%,28%)";
-  const rim = g.rare ? "#fff3c4" : "#d4b45a";
-  const face = "#e6c8a0";
-  const mark = g.gender === "f" ? "姫" : g.origin === "sangokushi" ? "三" : g.origin === "guest" ? "稀" : "武";
-  return (
-    '<svg class="portrait" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">' +
-    '<rect width="48" height="48" fill="#140e08"/>' +
-    '<polygon points="8,20 24,4 40,20 36,44 12,44" fill="' + fill + '" stroke="' + rim + '" stroke-width="1.5"/>' +
-    '<circle cx="24" cy="22" r="8" fill="' + face + '"/>' +
-    '<rect x="16" y="14" width="16" height="5" fill="#1a1208"/>' +
-    '<text x="24" y="40" text-anchor="middle" font-size="9" fill="#f4e6c8">' + mark + "</text>" +
-    "</svg>"
+function hash32(s) {
+  let h = 2166136261;
+  const t = String(s || "");
+  for (let i = 0; i < t.length; i++) {
+    h ^= t.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function clanArmorColor(clanId) {
+  if (!clanId) return null;
+  const list = D().clans || [];
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].id === clanId) return list[i].color || null;
+  }
+  return null;
+}
+
+const FAMOUS_PORTRAIT_COUNT = 300;
+
+const PORTRAIT_NAMED = {
+  "織田信長": "p-nobunaga.png",
+  "徳川家康": "p-ieyasu.png",
+  "羽柴秀吉": "p-hideyoshi.png",
+  "豊臣秀吉": "p-hideyoshi.png",
+  "武田信玄": "p-shingen.png",
+  "上杉謙信": "p-kenshin.png",
+  "伊達政宗": "p-masamune.png",
+  "明智光秀": "p-mitsuhide.png",
+  "本多忠勝": "p-bushi1.png",
+  "福島正則": "p-bushi2.png",
+  "井伊直政": "p-kabuto.png",
+  "竹中重治": "p-scholar.png",
+  "毛利元就": "p-elder.png",
+  "帰蝶": "p-hime.png",
+  "茶々": "p-hime2.png",
+  "関羽": "p-sangoku.png",
+  "劉備": "p-r-liubei.png",
+  "張飛": "p-r-zhangfei.png",
+  "諸葛亮": "p-r-zhuge.png",
+  "趙雲": "p-r-zhaoyun.png",
+  "馬超": "p-r-machao.png",
+  "黄忠": "p-r-huangzhong.png",
+  "龐統": "p-r-pangtong.png",
+  "姜維": "p-r-jiangwei.png",
+  "魏延": "p-r-weiyan.png",
+  "曹操": "p-r-caocao.png",
+  "司馬懿": "p-r-simayi.png",
+  "郭嘉": "p-r-guojia.png",
+  "荀彧": "p-r-xunyu.png",
+  "賈詡": "p-r-jiaxu.png",
+  "夏侯惇": "p-r-xiahoudun.png",
+  "張遼": "p-r-zhangliao.png",
+  "許褚": "p-r-xuchu.png",
+  "典韋": "p-r-dianwei.png",
+  "徐晃": "p-r-xuhuang.png",
+  "司馬昭": "p-r-simazhao.png",
+  "鄧艾": "p-r-dengai.png",
+  "鍾会": "p-r-zhonghui.png",
+  "孫権": "p-r-sunquan.png",
+  "孫策": "p-r-sunce.png",
+  "周瑜": "p-r-zhouyu.png",
+  "陸遜": "p-r-luxun.png",
+  "呂蒙": "p-r-lumeng.png",
+  "甘寧": "p-r-ganning.png",
+  "太史慈": "p-r-taishici.png",
+  "魯粛": "p-r-lusu.png",
+  "黄蓋": "p-r-huanggai.png",
+  "周泰": "p-r-zhoutai.png",
+  "呂布": "p-r-lubu.png",
+  "貂蝉": "p-r-diaochan.png",
+  "董卓": "p-r-dongzhuo.png",
+  "袁紹": "p-r-yuanshao.png",
+  "劉表": "p-r-liubiao.png",
+  "公孫瓚": "p-r-gongsun.png",
+  "左慈": "p-r-zuoci.png",
+  "華佗": "p-r-huatuo.png",
+  "馬謖": "p-r-masu.png",
+  "関平": "p-r-guanping.png",
+  "張苞": "p-r-zhangbao.png",
+  "孟獲": "p-r-menghuo.png",
+  "祝融": "p-r-zhurong.png",
+  "大喬": "p-r-daqiao.png",
+  "小喬": "p-r-xiaoqiao.png",
+  "甄姫": "p-r-zhenji.png",
+  "蔡文姫": "p-r-caiwenji.png",
+  "牙狼": "p-r-garo.png",
+  "MJ": "p-r-mj.png",
+  "像": "p-r-statue.png",
+  "ハンプティダンプティ": "p-r-humpty.png",
+  "かわぐちまっち": "p-r-match.png",
+  "宮本武蔵": "p-r-musashi.png",
+  "石川五右衛門": "p-r-goemon.png",
+  "デカマスター": "p-r-dekamaster.png",
+  "宮沢賢治": "p-r-kenji.png",
+  "宮沢りえ": "p-r-rie.png",
+  "範馬刃牙": "p-r-baki.png",
+  "木村モナ": "p-r-mona.png",
+  "那須川天心": "p-r-tenshin.png",
+  "千利休": "p-r-rikyu.png"
+};
+
+const PORTRAIT_STYLE_M_YOUNG = [
+  "p-style-m2.png",
+  "p-style-m4.png",
+  "p-style-m5.png",
+  "p-style-m10.png"
+];
+const PORTRAIT_STYLE_M_MID = ["p-style-m3.png", "p-style-m6.png"];
+const PORTRAIT_STYLE_M_ELDER = ["p-style-m9.png"];
+const PORTRAIT_STYLE_F_YOUNG = ["p-style-f1.png", "p-style-f2.png"];
+const PORTRAIT_STYLE_F_MID = ["p-style-f3.png"];
+const PORTRAIT_STYLE_M = PORTRAIT_STYLE_M_YOUNG.concat(PORTRAIT_STYLE_M_MID, PORTRAIT_STYLE_M_ELDER);
+const PORTRAIT_STYLE_F = PORTRAIT_STYLE_F_YOUNG.concat(PORTRAIT_STYLE_F_MID);
+
+const FEMALE_NAMES = {
+  "貂蝉": 1, "大喬": 1, "小喬": 1, "甄姫": 1, "蔡文姫": 1, "祝融": 1,
+  "宮沢りえ": 1, "木村モナ": 1
+};
+
+const portraitCache = {};
+const oilBitmaps = {};
+let famousNameSet = null;
+let oilBitmapsReady = false;
+
+function mulberry32(a) {
+  return function () {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function isFemaleGen(g) {
+  if (!g) return false;
+  if (FEMALE_NAMES[g.name]) return true;
+  return g.gender === "f";
+}
+
+function famousNames() {
+  if (famousNameSet) return famousNameSet;
+  famousNameSet = {};
+  const hist = D().historical || [];
+  const ranked = hist.map((h, i) => ({
+    name: h[0],
+    clan: h[1],
+    score: h[2] + h[3] + h[4] + h[5] + h[6] - i * 0.001
+  }));
+  const bestClan = {};
+  ranked.forEach((r) => {
+    if (!bestClan[r.clan] || r.score > bestClan[r.clan].score) bestClan[r.clan] = r;
+  });
+  let n = 0;
+  Object.keys(bestClan).forEach((c) => {
+    const nm = bestClan[c].name;
+    if (!famousNameSet[nm] && n < FAMOUS_PORTRAIT_COUNT) {
+      famousNameSet[nm] = 1;
+      n++;
+    }
+  });
+  ranked.sort((a, b) => b.score - a.score);
+  for (let i = 0; i < ranked.length && n < FAMOUS_PORTRAIT_COUNT; i++) {
+    if (!famousNameSet[ranked[i].name]) {
+      famousNameSet[ranked[i].name] = 1;
+      n++;
+    }
+  }
+  return famousNameSet;
+}
+
+function isFamous(g) {
+  return !!(g && g.name && famousNames()[g.name]);
+}
+
+function portraitSeed(g) {
+  return hash32(
+    String(g && g.name ? g.name : "武将") +
+      "|" +
+      String(g && g.id ? g.id : "") +
+      "|" +
+      (isFemaleGen(g) ? "f" : "m") +
+      "|" +
+      String(g && g.origin ? g.origin : "") +
+      "|" +
+      (g && g.rare ? "1" : "0")
   );
+}
+
+function rgbStr(r, g, b, a) {
+  r = Math.max(0, Math.min(255, r | 0));
+  g = Math.max(0, Math.min(255, g | 0));
+  b = Math.max(0, Math.min(255, b | 0));
+  if (a == null || a >= 1) return "rgb(" + r + "," + g + "," + b + ")";
+  return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+}
+
+function parseHex(c) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(c || ""));
+  if (!m) return [90, 58, 32];
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function mixRgb(a, b, t) {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+
+function shadeRgb(c, k) {
+  return [
+    Math.max(0, Math.min(255, c[0] * k)),
+    Math.max(0, Math.min(255, c[1] * k)),
+    Math.max(0, Math.min(255, c[2] * k))
+  ];
+}
+
+function varyRgb(c, rng, amt) {
+  return [c[0] + (rng() * 2 - 1) * amt, c[1] + (rng() * 2 - 1) * amt, c[2] + (rng() * 2 - 1) * amt];
+}
+
+function oilStroke(ctx, x, y, len, thick, ang, rgb, a) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(ang);
+  ctx.globalAlpha = a == null ? 1 : a;
+  ctx.fillStyle = rgbStr(rgb[0], rgb[1], rgb[2]);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, len, thick, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function oilFill(ctx, rng, cx, cy, rx, ry, rgb, count, len, thick, ang0, angJ, minA) {
+  const a0 = minA == null ? 0.28 : minA;
+  for (let i = 0; i < count; i++) {
+    const t = rng() * Math.PI * 2;
+    const r = Math.sqrt(rng());
+    oilStroke(
+      ctx,
+      cx + Math.cos(t) * rx * r,
+      cy + Math.sin(t) * ry * r,
+      len * (0.55 + rng() * 0.9),
+      thick * (0.45 + rng() * 0.8),
+      ang0 + (rng() - 0.5) * angJ,
+      varyRgb(rgb, rng, 28),
+      a0 + rng() * 0.5
+    );
+  }
+}
+
+function drawOilPhoto(ctx, img, size) {
+  const iw = img.naturalWidth || img.width;
+  const ih = img.naturalHeight || img.height;
+  const s = Math.min(iw, ih);
+  const sx = (iw - s) / 2;
+  const sy = Math.max(0, (ih - s) * 0.08);
+  ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+}
+
+function oilifyCanvas(ctx, size, rng, count, strokeScale) {
+  let src;
+  try {
+    src = ctx.getImageData(0, 0, size, size);
+  } catch (e) {
+    return;
+  }
+  const d = src.data;
+  const sample = (x, y) => {
+    const xx = Math.max(0, Math.min(size - 1, x | 0));
+    const yy = Math.max(0, Math.min(size - 1, y | 0));
+    const i = (yy * size + xx) * 4;
+    return [d[i], d[i + 1], d[i + 2]];
+  };
+  const n = count || 260;
+  const sc = strokeScale == null ? 1 : strokeScale;
+  for (let i = 0; i < n; i++) {
+    const x = rng() * size;
+    const y = rng() * size;
+    const col = sample(x + (rng() - 0.5) * 3, y + (rng() - 0.5) * 3);
+    const ang = -0.45 + rng() * 0.9 + (y / size) * 0.18;
+    const len = size * (0.012 + rng() * 0.028) * sc;
+    oilStroke(ctx, x, y, len, len * (0.22 + rng() * 0.32), ang, varyRgb(col, rng, 8), 0.22 + rng() * 0.38);
+  }
+}
+
+function fillOval(ctx, x, y, rx, ry, rgb, a) {
+  ctx.save();
+  ctx.globalAlpha = a == null ? 1 : a;
+  ctx.fillStyle = rgbStr(rgb[0], rgb[1], rgb[2]);
+  ctx.beginPath();
+  ctx.ellipse(x, y, Math.max(0.4, rx), Math.max(0.4, ry), 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function paintOilFrame(ctx, size, rare, famous) {
+  const vig = ctx.createRadialGradient(size * 0.46, size * 0.36, size * 0.18, size * 0.5, size * 0.5, size * 0.8);
+  vig.addColorStop(0, "rgba(0,0,0,0)");
+  vig.addColorStop(1, "rgba(12,7,4,0.32)");
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = rare ? "rgba(232,196,96,0.92)" : famous ? "rgba(210,176,86,0.82)" : "rgba(168,132,72,0.5)";
+  ctx.lineWidth = size * 0.04;
+  ctx.strokeRect(size * 0.02, size * 0.02, size * 0.96, size * 0.96);
+}
+
+const NONFAMOUS_M_COUNT = 80;
+const NONFAMOUS_F_COUNT = 20;
+
+function patternFileName(g) {
+  const female = isFemaleGen(g);
+  const n = female ? NONFAMOUS_F_COUNT : NONFAMOUS_M_COUNT;
+  const idx = portraitSeed(g) % n;
+  const pad = idx < 10 ? "0" + idx : String(idx);
+  return female ? "p-nf-" + pad + ".jpg" : "p-nm-" + pad + ".jpg";
+}
+
+function pickStyleBitmap(g) {
+  const file = patternFileName(g);
+  const baked = oilBitmaps[file];
+  if (baked && baked.naturalWidth) return baked;
+  const female = isFemaleGen(g);
+  const age = (g && g.age) || 0;
+  let pool;
+  if (female) {
+    pool = age >= 48 ? PORTRAIT_STYLE_F_MID.concat(PORTRAIT_STYLE_F_YOUNG) : PORTRAIT_STYLE_F_YOUNG.slice();
+  } else if (age >= 58) {
+    pool = PORTRAIT_STYLE_M_ELDER.concat(PORTRAIT_STYLE_M_MID);
+  } else if (age >= 44) {
+    pool = PORTRAIT_STYLE_M_MID.concat(PORTRAIT_STYLE_M_YOUNG);
+  } else {
+    pool = PORTRAIT_STYLE_M_YOUNG.slice();
+  }
+  if (g && g.origin === "sangokushi" && !female) {
+    pool = ["p-sangoku.png"].concat(pool);
+  }
+  const avail = pool.filter((f) => oilBitmaps[f] && oilBitmaps[f].naturalWidth);
+  if (!avail.length) return null;
+  return oilBitmaps[avail[portraitSeed(g) % avail.length]];
+}
+
+function remapOilPortrait(ctx, size, rng, clanRgb) {
+  let src;
+  try {
+    src = ctx.getImageData(0, 0, size, size);
+  } catch (e) {
+    return;
+  }
+  const s = src.data;
+  const dst = ctx.createImageData(size, size);
+  const d = dst.data;
+  const hue = (rng() - 0.5) * 14;
+  const bright = 0.97 + rng() * 0.06;
+  const clanT = 0.04 + rng() * 0.06;
+  const cr = clanRgb || [40, 28, 18];
+  for (let i = 0; i < s.length; i += 4) {
+    const ny = ((i / 4 / size) | 0) / size;
+    const armor = ny > 0.62 ? 1.15 : 0.12;
+    let r = s[i] * bright + hue * 0.18 + cr[0] * clanT * armor;
+    let g = s[i + 1] * bright + hue * 0.04 + cr[1] * clanT * armor;
+    let b = s[i + 2] * bright - hue * 0.12 + cr[2] * clanT * armor;
+    d[i] = r < 0 ? 0 : r > 255 ? 255 : r;
+    d[i + 1] = g < 0 ? 0 : g > 255 ? 255 : g;
+    d[i + 2] = b < 0 ? 0 : b > 255 ? 255 : b;
+    d[i + 3] = 255;
+  }
+  ctx.putImageData(dst, 0, 0);
+}
+
+function stampPortrait(ctx, size, g, bg) {
+  const bits = portraitSeed(g);
+  const r = bg ? (bits & 255) * 0.06 + bg[0] * 0.94 : (bits & 255) * 0.05;
+  ctx.fillStyle = rgbStr(r, bg ? bg[1] : 18, bg ? bg[2] : 10);
+  ctx.fillRect(size - 3, size - 3, 2, 2);
+  if (bg) ctx.fillRect(1, size - 3, 2, 2);
+}
+
+function paintOilFeatures(ctx, size, rng, cx, faceY, faceW, faceH, turn, skin, hair, female, age) {
+  const brow = shadeRgb(hair, age >= 54 ? 1.35 : 0.92);
+  const browY = faceY - faceH * 0.28;
+  const eY = faceY - faceH * 0.06;
+  const nY = faceY + faceH * 0.12;
+  const mY = faceY + faceH * 0.42;
+  const lEye = cx - faceW * (0.34 - turn * 0.22);
+  const rEye = cx + faceW * (0.34 + turn * 0.22);
+  const lW = faceW * (turn > 0.12 ? 0.2 : 0.26);
+  const rW = faceW * (turn < -0.12 ? 0.2 : 0.26);
+  oilStroke(ctx, lEye, browY, lW, size * 0.012, 0.12 + turn * 0.2, brow, 0.88);
+  oilStroke(ctx, rEye, browY, rW, size * 0.012, -0.12 + turn * 0.2, brow, 0.88);
+  const white = [236, 226, 214];
+  fillOval(ctx, lEye, eY, lW * 0.42, faceH * 0.09, white, 0.95);
+  fillOval(ctx, rEye, eY, rW * 0.42, faceH * 0.09, white, 0.95);
+  const iris = [42 + rng() * 18, 28, 18];
+  fillOval(ctx, lEye + turn * 1.2, eY, size * 0.018, size * 0.02, iris, 1);
+  fillOval(ctx, rEye + turn * 1.2, eY, size * 0.018, size * 0.02, iris, 1);
+  fillOval(ctx, lEye + turn * 1.2, eY, size * 0.008, size * 0.009, [16, 10, 8], 1);
+  fillOval(ctx, rEye + turn * 1.2, eY, size * 0.008, size * 0.009, [16, 10, 8], 1);
+  fillOval(ctx, lEye - size * 0.006, eY - size * 0.005, size * 0.005, size * 0.004, [250, 246, 236], 0.8);
+  fillOval(ctx, rEye - size * 0.006, eY - size * 0.005, size * 0.005, size * 0.004, [250, 246, 236], 0.8);
+  oilStroke(ctx, lEye, eY - faceH * 0.07, lW * 0.5, size * 0.006, 0.08, shadeRgb(hair, 0.7), 0.7);
+  oilStroke(ctx, rEye, eY - faceH * 0.07, rW * 0.5, size * 0.006, -0.08, shadeRgb(hair, 0.7), 0.7);
+  const nose = shadeRgb(skin, 0.72);
+  fillOval(ctx, cx + turn * faceW * 0.18, nY, size * 0.022, faceH * 0.16, nose, 0.55);
+  fillOval(ctx, cx + turn * faceW * 0.28, nY + faceH * 0.08, size * 0.018, size * 0.014, shadeRgb(skin, 0.62), 0.45);
+  fillOval(ctx, cx + turn * faceW * 0.08, nY - faceH * 0.04, size * 0.012, size * 0.03, mixRgb(skin, [255, 230, 196], 0.25), 0.4);
+  const lip = female ? [156, 78, 72] : [124, 72, 62];
+  fillOval(ctx, cx + turn * faceW * 0.06, mY, faceW * 0.22, size * 0.016, lip, 0.85);
+  fillOval(ctx, cx + turn * faceW * 0.06, mY + size * 0.008, faceW * 0.18, size * 0.01, shadeRgb(lip, 0.78), 0.7);
+  if (!female && rng() < 0.62) {
+    oilFill(ctx, rng, cx + turn * faceW * 0.08, mY - faceH * 0.08, faceW * 0.38, size * 0.018, hair, 10, size * 0.02, size * 0.007, 0.05, 0.4, 0.7);
+  }
+  if (!female && rng() < 0.48) {
+    oilFill(ctx, rng, cx + turn * faceW * 0.06, mY + faceH * 0.16, faceW * (0.22 + rng() * 0.22), faceH * (0.08 + rng() * 0.1), hair, 12, size * 0.018, size * 0.01, 0.2, 0.7, 0.65);
+  }
+}
+
+function preloadOilBitmaps(done) {
+  if (oilBitmapsReady) {
+    done();
+    return;
+  }
+  if (!preloadOilBitmaps.waiters) preloadOilBitmaps.waiters = [];
+  preloadOilBitmaps.waiters.push(done);
+  if (preloadOilBitmaps.started) return;
+  preloadOilBitmaps.started = true;
+  const files = [];
+  const seen = {};
+  Object.keys(PORTRAIT_NAMED).forEach((n) => {
+    const f = PORTRAIT_NAMED[n];
+    if (f && !seen[f]) {
+      seen[f] = 1;
+      files.push(f);
+    }
+  });
+  PORTRAIT_STYLE_M.concat(PORTRAIT_STYLE_F).forEach((f) => {
+    if (f && !seen[f]) {
+      seen[f] = 1;
+      files.push(f);
+    }
+  });
+  for (let i = 0; i < NONFAMOUS_M_COUNT; i++) {
+    const f = "p-nm-" + (i < 10 ? "0" + i : i) + ".jpg";
+    if (!seen[f]) {
+      seen[f] = 1;
+      files.push(f);
+    }
+  }
+  for (let i = 0; i < NONFAMOUS_F_COUNT; i++) {
+    const f = "p-nf-" + (i < 10 ? "0" + i : i) + ".jpg";
+    if (!seen[f]) {
+      seen[f] = 1;
+      files.push(f);
+    }
+  }
+  const flush = () => {
+    oilBitmapsReady = true;
+    const q = preloadOilBitmaps.waiters || [];
+    preloadOilBitmaps.waiters = [];
+    q.forEach((fn) => fn());
+  };
+  if (!files.length) {
+    flush();
+    return;
+  }
+  let left = files.length;
+  const finish = () => {
+    left--;
+    if (left <= 0) flush();
+  };
+  files.forEach((f) => {
+    const img = new Image();
+    img.onload = () => {
+      oilBitmaps[f] = img;
+      finish();
+    };
+    img.onerror = finish;
+    img.src = "assets/portraits/" + f + "?v=58";
+  });
+}
+
+function drawPaintedPortrait(ctx, g, size) {
+  const rng = mulberry32(portraitSeed(g));
+  const n = (lo, hi) => lo + rng() * (hi - lo);
+  const female = isFemaleGen(g);
+  const rare = !!(g && g.rare);
+  const famous = isFamous(g);
+  const namedFile = PORTRAIT_NAMED[g && g.name];
+  const photo = namedFile && oilBitmaps[namedFile];
+  if (photo && photo.naturalWidth) {
+    drawOilPhoto(ctx, photo, size);
+    oilifyCanvas(ctx, size, rng, famous || rare ? 280 : 220, 0.85);
+    paintOilFrame(ctx, size, rare, famous);
+    stampPortrait(ctx, size, g, null);
+    return;
+  }
+  const sangoku = g && g.origin === "sangokushi";
+  const guest = g && g.origin === "guest";
+  const age = (g && g.age) || 0;
+  const valor = (g && g.valor) || 50;
+  const intellect = (g && g.intellect) || 50;
+  const clan = parseHex(clanArmorColor(g && g.clanId));
+  const armorBase = sangoku
+    ? mixRgb(clan, [48, 92, 58], 0.42)
+    : guest
+      ? mixRgb(clan, [88, 42, 108], 0.38)
+      : mixRgb(clan, [28, 18, 12], 0.18);
+  const styleImg = pickStyleBitmap(g);
+  if (styleImg) {
+    drawOilPhoto(ctx, styleImg, size);
+    oilifyCanvas(ctx, size, rng, famous || rare ? 90 : 70, 0.42);
+    paintOilFrame(ctx, size, rare, famous);
+    stampPortrait(ctx, size, g, armorBase);
+    return;
+  }
+  const skins = [
+    [214, 176, 138],
+    [198, 158, 118],
+    [186, 144, 108],
+    [168, 126, 92],
+    [222, 186, 150]
+  ];
+  const skin = skins[(rng() * skins.length) | 0];
+  const hairSets = female
+    ? [
+        [28, 18, 12],
+        [46, 28, 16],
+        [16, 11, 9],
+        [64, 38, 24]
+      ]
+    : [
+        [14, 10, 8],
+        [26, 18, 14],
+        [10, 8, 7],
+        [38, 28, 20]
+      ];
+  let hair = hairSets[(rng() * hairSets.length) | 0];
+  if (age >= 54 || (intellect >= 88 && valor < 68 && rng() < 0.5)) {
+    hair = mixRgb(hair, [176, 170, 158], 0.45 + rng() * 0.28);
+  }
+  const umber = sangoku ? [48, 30, 18] : guest ? [36, 22, 40] : [44, 28, 16];
+  const bg = mixRgb(umber, armorBase, 0.08);
+  ctx.fillStyle = rgbStr(bg[0], bg[1], bg[2]);
+  ctx.fillRect(0, 0, size, size);
+  const rich = famous || rare ? 1.4 : 1;
+  for (let i = 0; i < 90 * rich; i++) {
+    oilStroke(
+      ctx,
+      n(0, size),
+      n(0, size),
+      n(size * 0.05, size * 0.2),
+      n(size * 0.014, size * 0.045),
+      n(-0.5, 0.95),
+      varyRgb(mixRgb(bg, [96, 62, 32], rng() * 0.4), rng, 16),
+      n(0.1, 0.34)
+    );
+  }
+
+  const turn = n(-0.28, 0.28);
+  const cx = size * (0.5 + turn * 0.08);
+  const faceW = size * (female ? n(0.27, 0.31) : n(0.29, 0.34));
+  const faceH = size * n(0.36, 0.42);
+  const faceY = size * (0.4 + n(-0.015, 0.02));
+  const scholar = !female && intellect >= 80 && rng() < 0.32;
+  const shY = size * 0.68;
+  const cloth = female ? mixRgb(armorBase, [148, 46, 42], 0.5 + rng() * 0.28) : shadeRgb(armorBase, 0.55 + rng() * 0.2);
+  const gold = [196, 160, 74];
+  const shadow = shadeRgb(skin, 0.62);
+  const hi = mixRgb(skin, [255, 228, 190], 0.28);
+
+  ctx.fillStyle = rgbStr(cloth[0], cloth[1], cloth[2]);
+  ctx.beginPath();
+  ctx.moveTo(size * 0.02, size);
+  ctx.quadraticCurveTo(size * 0.12, shY, cx - faceW * 1.15, shY + size * 0.04);
+  ctx.lineTo(cx + faceW * 1.15, shY + size * 0.04);
+  ctx.quadraticCurveTo(size * 0.88, shY, size * 0.98, size);
+  ctx.closePath();
+  ctx.fill();
+  oilFill(ctx, rng, cx, shY + size * 0.18, size * 0.5, size * 0.26, shadeRgb(cloth, 0.78), 28 * rich, size * 0.08, size * 0.028, 0.08, 0.55, 0.5);
+  oilFill(ctx, rng, cx + turn * size * 0.12, shY + size * 0.08, size * 0.38, size * 0.16, mixRgb(cloth, gold, 0.08), 22 * rich, size * 0.06, size * 0.02, 0.02, 0.45, 0.45);
+  if (!female) {
+    for (let r = 0; r < 5; r++) {
+      const y = shY + size * (0.06 + r * 0.05);
+      ctx.strokeStyle = rgbStr(gold[0], gold[1], gold[2]);
+      ctx.globalAlpha = 0.45;
+      ctx.lineWidth = size * 0.012;
+      ctx.beginPath();
+      ctx.moveTo(cx - size * 0.28, y);
+      ctx.quadraticCurveTo(cx, y + 2, cx + size * 0.28, y);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    fillOval(ctx, cx, shY + size * 0.12, size * 0.045, size * 0.045, gold, 0.7);
+  } else {
+    oilFill(ctx, rng, cx, shY + size * 0.04, size * 0.2, size * 0.05, mixRgb(cloth, [232, 210, 180], 0.35), 10, size * 0.04, size * 0.014, 0.1, 0.4, 0.5);
+  }
+
+  const neck = shadeRgb(skin, 0.76);
+  fillOval(ctx, cx + turn * faceW * 0.1, faceY + faceH * 0.92, size * 0.08, size * 0.11, neck, 1);
+  oilFill(ctx, rng, cx, faceY + faceH * 0.92, size * 0.08, size * 0.1, neck, 8, size * 0.028, size * 0.012, 1.15, 0.35, 0.5);
+
+  fillOval(ctx, cx + turn * faceW * 0.05, faceY - faceH * (female ? 0.02 : 0.12), faceW * (female ? 1.42 : 1.18), faceH * (female ? 1.28 : 0.82), hair, 1);
+  oilFill(ctx, rng, cx, faceY - faceH * 0.08, faceW * 1.2, faceH, hair, (female ? 32 : 20) * rich, size * 0.05, size * 0.018, 0.25, 0.8, 0.55);
+
+  ctx.fillStyle = rgbStr(skin[0], skin[1], skin[2]);
+  ctx.beginPath();
+  ctx.ellipse(cx, faceY, faceW, faceH, turn * 0.12, 0, Math.PI * 2);
+  ctx.fill();
+  oilFill(ctx, rng, cx + turn * faceW * 0.15, faceY + faceH * 0.08, faceW * 0.7, faceH * 0.7, shadow, 12, size * 0.045, size * 0.02, 0.5, 0.55, 0.4);
+  oilFill(ctx, rng, cx - turn * faceW * 0.2, faceY - faceH * 0.12, faceW * 0.5, faceH * 0.42, hi, 10, size * 0.032, size * 0.014, -0.2, 0.45, 0.42);
+  oilFill(ctx, rng, cx, faceY, faceW * 0.85, faceH * 0.85, skin, 18 * rich, size * 0.04, size * 0.016, 0.25, 0.6, 0.35);
+
+  fillOval(ctx, cx - faceW * (0.98 - turn * 0.15), faceY + faceH * 0.02, size * 0.032, size * 0.046, shadeRgb(skin, 0.88), 1);
+  fillOval(ctx, cx + faceW * (0.98 + turn * 0.15), faceY + faceH * 0.02, size * 0.032, size * 0.046, shadeRgb(skin, 0.8), 1);
+
+  if (female) {
+    fillOval(ctx, cx, faceY - faceH * 0.55, faceW * 1.12, faceH * 0.46, hair, 1);
+    oilFill(ctx, rng, cx, faceY - faceH * 0.52, faceW * 1.05, faceH * 0.4, hair, 14, size * 0.04, size * 0.015, 0.1, 0.6, 0.55);
+    if (rng() < 0.5) fillOval(ctx, cx + faceW * 0.9, faceY - faceH * 0.12, size * 0.05, size * 0.055, [154, 42, 40], 0.85);
+  } else if (scholar) {
+    ctx.fillStyle = rgbStr(16, 12, 10);
+    ctx.beginPath();
+    ctx.moveTo(cx - faceW * 1.05, faceY - faceH * 0.42);
+    ctx.quadraticCurveTo(cx, faceY - faceH * 1.22, cx + faceW * 1.05, faceY - faceH * 0.42);
+    ctx.closePath();
+    ctx.fill();
+    oilFill(ctx, rng, cx, faceY - faceH * 0.62, faceW * 0.95, faceH * 0.4, [16, 12, 10], 12, size * 0.04, size * 0.014, 0.1, 0.4, 0.6);
+  } else {
+    fillOval(ctx, cx, faceY - faceH * 0.62, faceW * 1.02, faceH * 0.36, hair, 1);
+    oilFill(ctx, rng, cx, faceY - faceH * 0.62, faceW * 0.95, faceH * 0.32, hair, 12, size * 0.036, size * 0.014, 0.12, 0.5, 0.55);
+    fillOval(ctx, cx - turn * faceW * 0.15, faceY - faceH * 0.98, size * 0.07, size * 0.07, hair, 1);
+    oilStroke(ctx, cx - turn * faceW * 0.35, faceY - faceH * 0.82, size * 0.05, size * 0.018, 0.9, mixRgb(hair, [70, 40, 90], 0.35), 0.7);
+  }
+
+  const featSeed = (portraitSeed(g) ^ 0xa5a5a5a5) >>> 0;
+  paintOilFeatures(ctx, size, mulberry32(featSeed), cx, faceY, faceW, faceH, turn, skin, hair, female, age);
+  oilifyCanvas(ctx, size, rng, famous || rare ? 200 : 160, 0.7);
+  paintOilFeatures(ctx, size, mulberry32(featSeed), cx, faceY, faceW, faceH, turn, skin, hair, female, age);
+  oilifyCanvas(ctx, size, rng, 70, 0.45);
+  paintOilFrame(ctx, size, rare, famous);
+
+  const bits = portraitSeed(g);
+  ctx.fillStyle = rgbStr((bits & 255) * 0.06 + bg[0] * 0.94, bg[1], bg[2]);
+  ctx.fillRect(size - 3, size - 3, 2, 2);
+  ctx.fillRect(1, size - 3, 2, 2);
+}
+
+function portraitKey(g) {
+  const age = (g && g.age) || 0;
+  const band = age >= 58 ? "E" : age >= 44 ? "M" : "Y";
+  return "oil12|" + String(portraitSeed(g)) + "|" + String((g && g.clanId) || "") + "|" + band + "|" + (isFamous(g) ? "F" : "n");
+}
+
+function portraitClass(g) {
+  if (g && g.rare) return "portrait rare-port";
+  if (isFamous(g)) return "portrait famous-port";
+  return "portrait";
+}
+
+function portraitRim(g) {
+  if (g && g.rare) return "#f0d078";
+  if (isFamous(g)) return "#e6c36a";
+  return clanArmorColor(g && g.clanId) || "#c4a056";
+}
+
+function portraitPayload(g) {
+  return {
+    name: g.name,
+    id: g.id || "",
+    gender: g.gender || "",
+    origin: g.origin || "",
+    rare: !!(g && g.rare),
+    clanId: g.clanId || "",
+    valor: g.valor || 0,
+    intellect: g.intellect || 0,
+    age: g.age || 0
+  };
+}
+
+function portraitHTML(g) {
+  if (!g) return "";
+  const name = String(g.name || "武将").replace(/[&<>"]/g, "");
+  const cls = portraitClass(g);
+  const rim = portraitRim(g);
+  const key = portraitKey(g);
+  if (portraitCache[key]) {
+    return (
+      '<img class="' +
+      cls +
+      '" src="' +
+      portraitCache[key] +
+      '" width="44" height="44" alt="' +
+      name +
+      'の肖像" style="box-shadow:0 0 0 1.5px ' +
+      rim +
+      '">'
+    );
+  }
+  return (
+    '<canvas class="' +
+    cls +
+    ' js-port" width="128" height="128" data-pk="' +
+    key.replace(/"/g, "") +
+    '" data-g="' +
+    encodeURIComponent(JSON.stringify(portraitPayload(g))) +
+    '" style="box-shadow:0 0 0 1.5px ' +
+    rim +
+    '"></canvas>'
+  );
+}
+
+function paintQueuedPortraits() {
+  const nodes = document.querySelectorAll("canvas.js-port");
+  if (!nodes.length) return;
+  preloadOilBitmaps(() => {
+    let i = 0;
+    const paintOne = (cv) => {
+      if (!cv || !cv.getContext) return;
+      let g = null;
+      try {
+        g = JSON.parse(decodeURIComponent(cv.getAttribute("data-g") || "%7B%7D"));
+      } catch (e) {}
+      if (!g) return;
+      drawPaintedPortrait(cv.getContext("2d"), g, cv.width);
+      const key = cv.getAttribute("data-pk") || portraitKey(g);
+      let url = "";
+      try {
+        url = cv.toDataURL("image/jpeg", 0.88);
+        if (key) portraitCache[key] = url;
+      } catch (e) {}
+      if (url && cv.parentNode) {
+        const img = document.createElement("img");
+        img.className = cv.className.replace("js-port", "").replace(/\s+/g, " ").trim();
+        img.src = url;
+        img.width = 44;
+        img.height = 44;
+        img.alt = String(g.name || "武将") + "の肖像";
+        img.style.cssText = cv.getAttribute("style") || "";
+        cv.parentNode.replaceChild(img, cv);
+      } else {
+        cv.classList.remove("js-port");
+      }
+    };
+    const first = Math.min(nodes.length, 24);
+    while (i < first) paintOne(nodes[i++]);
+    const run = () => {
+      const t0 = typeof performance !== "undefined" ? performance.now() : 0;
+      while (i < nodes.length) {
+        paintOne(nodes[i++]);
+        if (typeof performance !== "undefined" && performance.now() - t0 > 12) break;
+      }
+      if (i < nodes.length) requestAnimationFrame(run);
+    };
+    if (i < nodes.length) requestAnimationFrame(run);
+  });
 }
 
 function resIcon(key) {
@@ -181,8 +922,10 @@ function rosterListHtml() {
     .map((g) => {
       return (
         '<div class="gen">' +
-        portraitSVG(g) +
-        "<div><b>" +
+        '<span class="gen-icon">' +
+        portraitHTML(g) +
+        "</span>" +
+        "<div class=\"gen-body\"><b>" +
         (g.gender === "f" ? "姫　" : "") +
         g.name +
         "</b><div class=\"tiny\">" +
@@ -201,13 +944,6 @@ function rosterListHtml() {
       );
     })
     .join("");
-}
-
-function rosterMetaText() {
-  const all = catalogGenerals().length;
-  const n = rosterFiltered().length;
-  const hist = (D().historical || []).length;
-  return n + " / " + all + "名（戦国武将" + hist + "・レア除く）";
 }
 
 function renderTitle() {
@@ -230,8 +966,6 @@ function renderTitle() {
     '<img class="crest" src="assets/battle.png" alt="長篠の戦い図屏風">' +
     " <h1 class=\"game-title\">群雄覇業</h1>" +
     '<p class="game-sub">六十余州制覇</p>' +
-    '<p class="blurb">信長の野望に範を取った、ブラウザ完結の戦国シミュレーション。' +
-    "1期はリアルタイム10分。人数が6人に満たない席はPCが代行する。開始する国と、二十四の家から選べる。各家の始めの武将は6名。戦国武将は900名。国土の六割、または文化度99で勝利（文化は国土六割に並ぶほど上がりにくい）。武将は内政・軍事・文化へ配属できる。レア武将は百に一つの巡りで現れる。</p>" +
     '<div class="panel" style="text-align:left">' +
     '<div class="row">' +
     '<label class="field">人数（1〜6）<select id="pc">' +
@@ -268,7 +1002,6 @@ function renderTitle() {
     "</div></div>" +
     '<div class="panel title-roster" id="title-roster">' +
     " <h2>武将一覧</h2>" +
-    '<p class="tiny">戦国の士900名。三国志演義の50名と稀代の客将などレア武将は載せない。乱世では百に一つの巡りで現れる。</p>' +
     '<div class="row">' +
     '<input class="search" id="roster-q" placeholder="名や家で探す" value="' +
     (ui.rosterQuery || "").replace(/"/g, "&quot;") +
@@ -276,9 +1009,6 @@ function renderTitle() {
     '<label class="field">家<select id="roster-house">' +
     houseOpts +
     "</select></label>" +
-    "</div>" +
-    '<div class="tiny roster-meta" id="roster-meta">' +
-    rosterMetaText() +
     "</div>" +
     '<div class="gen-list title-gen-list" id="roster-list">' +
     rosterListHtml() +
@@ -412,7 +1142,7 @@ function renderHelp() {
     '<button class="btn ghost" type="button" data-close="help" aria-label="閉じる">閉じる</button></div>' +
     '<img class="hero" src="assets/castle2.jpg" alt="姫路城">' +
     '<div class="body">' +
-    "<p>令制国66（六十余州）を舞台に、1〜6人で争う。開始時に選べる家は24。各家の始めの武将は6名。6人に満たない席はPCが代行する。勝利は国土の60％支配、または文化度99。文化度は国土六割に並ぶほど上がりにくい。</p>" +
+    "<p>令制国66（六十余州）を舞台に、1〜6人で争う。開始時に選べる家は24。各家の始めの武将は6名。6人に満たない席はPCが代行する。勝利は国土の60％支配のみ。文化度は勝利条件ではなく、高いほどお恵み・来訪・お宝が寄りやすく、天災は避けやすい。</p>" +
     "<ul>" +
     "<li>プレイヤー名で登録できる。同じ名は重複して登録できない。席では登録済みの名を選べる。戦績は最大50名、各100件。</li>" +
     "<li>開始時に家と、開始する国を選べる。</li>" +
@@ -428,8 +1158,7 @@ function renderHelp() {
     "<li>お宝は装備品、内政の使い捨て道具、永続の家宝がある。蔵帳から使う。</li>" +
     "<li>地図は現代の日本列島の輪郭に合わせた六十余州図。領に合わせると、国名・領主・規模など表向きの情報が分かる。</li>" +
     "<li>城の守り・兵数・金米など内情は、忍者派遣・密偵・諜報で探る。密報は十期ほど地図に残る。</li>" +
-    "<li>天災・お恵み・天才来訪・お宝は低確率。</li>" +
-    "<li>トップの武将一覧は戦国の士900名（姫を除く）。三国志演義の武将50名と稀代の客将はレア。百に一つの巡りで現れ、武将一覧には載せない。</li>" +
+    "<li>天災・お恵み・天才来訪・お宝は低確率。文化度が高い家ほど、お恵み・来訪・お宝へ傾く。</li>" +
     "<li>ブラウザを閉じても時は進む。不在のあいだに勝敗が決まったときは、次に開いたときに報告し、戦績にも残る。</li>" +
     "<li>期が来て方針が空なら、スキップせず家臣がお任せで動く。</li>" +
     "<li>天災・お恵み・人材発見など、通知は「承知」で消すか、5秒で自動で閉じる。戦争終了の順位窓だけは、承知を押すまで消えない。</li>" +
@@ -453,7 +1182,7 @@ function cmdHelpBody(id) {
     c.target === "province" ? "地図上の国をクリックして対象にする。" : c.target === "clan" ? "相手の家を選ぶ。" : "対象は不要。";
   const cat = (D().catLabels && D().catLabels[found.cat]) || found.cat;
   let extra = "";
-  if (found.cat === "culture") extra += "<p>文化度は国土の六割支配に並ぶほど上がりにくい。一度で大きくは動かない。</p>";
+  if (found.cat === "culture") extra += "<p>文化度は一度で大きくは動かない。高く積もるほどお恵み・来訪・お宝が寄りやすく、天災は避けやすい。勝利条件ではない。</p>";
   if (c.soldiers) extra += "<p>出兵数と兵種を指定し、隣接する敵領へ向かう。</p>";
   if (c.unit) extra += "<p>兵種を選ぶ。追加の金米と募れる人数は兵種で異なる。</p>";
   if (c.soldiers || c.unit) {
@@ -617,7 +1346,7 @@ function renderGenIntro() {
     '<div class="modal-head"><h2 id="intro-title">武将紹介</h2>' +
     '<button class="btn ghost" type="button" data-close="intro" aria-label="閉じる">閉じる</button></div>' +
     '<div class="body cmdhelp-body intro-body">' +
-    (g ? '<div class="intro-head">' + portraitSVG(g) + "<div><b class=\"" + (g.rare ? "rare" : "") + "\">" + (g.rare ? "★レア　" : "") + (g.gender === "f" ? "姫　" : "") + g.name + "</b><div class=\"tiny\">" + house + "　" + (posts[g.post] || "未配属") + "</div>" + stats + "</div></div>" : "") +
+    (g ? '<div class="intro-head"><span class="gen-icon">' + portraitHTML(g) + "</span><div><b class=\"" + (g.rare ? "rare" : "") + "\">" + (g.rare ? "★レア　" : "") + (g.gender === "f" ? "姫　" : "") + g.name + "</b><div class=\"tiny\">" + house + "　" + (posts[g.post] || "未配属") + "</div>" + stats + "</div></div>" : "") +
     "<p>" +
     (intro.text || "") +
     "</p></div>" +
@@ -1002,7 +1731,7 @@ function mapSVG() {
     "% / 勝利60%　文化 " +
     (clan ? clan.culture : 0) +
     "/99<div class=\"win-share\"><div style=\"width:" +
-    Math.min(100, Math.max((share / 0.6) * 100, ((clan ? clan.culture : 0) / 99) * 100)) +
+    Math.min(100, (share / 0.6) * 100) +
     '%"></div></div>' +
     (ui.targetProvince ? "<br>対象国: " + state.provById[ui.targetProvince].name : "") +
     "<br><span class=\"own-legend\">自領 " +
@@ -1266,11 +1995,11 @@ function renderGame() {
     timerLabel() +
     '</div><div class="tiny">' +
     (state.paused ? "時は止まっている　" : "今期の残り　") +
-    "勝利は国土60%または文化99　残り国土 " +
+    "勝利は国土60%　残り国土 " +
     Math.max(0, Math.ceil((0.6 - share) * E().totalLand(state))) +
     " / 文化 " +
     (clan ? clan.culture : 0) +
-    '/99</div>' +
+    '/99（高いほどお恵みが寄る）</div>' +
     '<div class="row" style="margin-top:6px;justify-content:flex-end">' +
     '<button class="btn ghost" id="btn-help">遊び方</button>' +
     '<button class="btn ghost" id="btn-records">戦績</button>' +
@@ -1380,11 +2109,9 @@ function winModal() {
   const whyTag =
     state.winner.why === "wander"
       ? "放浪の果て"
-      : state.winner.why === "culture"
-        ? "文化度99"
-        : state.winner.why === "endwar"
-          ? "戦争終了"
-          : "国土六割";
+      : state.winner.why === "endwar"
+        ? "戦争終了"
+        : "国土六割";
   const lead =
     (state.awayEnded ? "不在のあいだに勝敗が決まった。戦績に残した。" : "") +
     (state.popup && state.popup.text
@@ -1537,8 +2264,10 @@ function genModal() {
           '<div class="gen tall" data-gid="' +
           g.id +
           '">' +
-          portraitSVG(g) +
-          "<div><b class=\"" +
+          '<span class="gen-icon">' +
+          portraitHTML(g) +
+          "</span>" +
+          "<div class=\"gen-body\"><b class=\"" +
           (g.rare ? "rare" : "") +
           "\">" +
           (g.rare ? "★レア　" : "") +
@@ -1938,6 +2667,7 @@ function syncIntroLayer() {
       if (e.target === bg) closeOverlay("intro");
     };
   }
+  paintQueuedPortraits();
 }
 
 function syncGenLayer() {
@@ -1957,6 +2687,7 @@ function syncGenLayer() {
     ui.genDirty = false;
     bindGenModal();
     restoreGenScroll();
+    paintQueuedPortraits();
     const wrap = $("#g-bg");
     if (wrap) {
       wrap.onclick = (e) => {
@@ -1995,6 +2726,7 @@ function render() {
     renderSetupPlayers();
     bindTitle();
     if (keep.roster && $("#roster-list")) $("#roster-list").scrollTop = keep.roster;
+    paintQueuedPortraits();
     return;
   }
   if (keep.gens != null) ui.genScroll = keep.gens;
@@ -2003,6 +2735,7 @@ function render() {
   app.innerHTML = renderGame();
   bindGame();
   syncGenLayer();
+  paintQueuedPortraits();
   if (keep.log && $(".log")) $(".log").scrollTop = keep.log;
   if (keep.queue && $(".queue")) $(".queue").scrollTop = keep.queue;
   if (keep.cmd && $(".cmd-grid")) $(".cmd-grid").scrollTop = keep.cmd;
@@ -2101,12 +2834,11 @@ function bindRoster() {
   const q = $("#roster-q");
   const house = $("#roster-house");
   const list = $("#roster-list");
-  const meta = $("#roster-meta");
   const apply = () => {
     if (q) ui.rosterQuery = q.value;
     if (house) ui.rosterHouse = house.value;
     if (list) list.innerHTML = rosterListHtml();
-    if (meta) meta.textContent = rosterMetaText();
+    paintQueuedPortraits();
   };
   if (q) q.oninput = apply;
   if (house) house.onchange = apply;
@@ -2728,13 +3460,13 @@ function dismissNotice() {
   return false;
 }
 
-function persistAway(unpause) {
+function persistAway() {
   if (!state) return;
   if (state.winner) {
     E().save(state);
     return;
   }
-  if (unpause && state.paused) {
+  if (state.paused) {
     state.turnEndsAt = Date.now() + Math.max(0, state.pauseLeft || 0);
     state.paused = false;
     state.pauseLeft = 0;
@@ -2743,11 +3475,13 @@ function persistAway(unpause) {
 }
 
 function resumePresence() {
-  if (!state || ui.screen !== "game" || state.winner) return;
+  if (!state || state.winner) return;
+  resolving = true;
   const n = E().catchUpTurns(state);
+  resolving = false;
   if (n) {
     E().save(state);
-    render();
+    if (ui.screen === "game") render();
   }
 }
 
@@ -2783,10 +3517,12 @@ function tick() {
   }
   if (remainMs() <= 0) {
     resolving = true;
-    E().resolveTurn(state);
+    const n = E().catchUpTurns(state);
     resolving = false;
-    E().save(state);
-    render();
+    if (n) {
+      E().save(state);
+      render();
+    }
   }
 }
 
@@ -2799,6 +3535,9 @@ function boot() {
   if (clockTimer) clearInterval(clockTimer);
   clockTimer = setInterval(tick, 250);
   window.addEventListener("pagehide", () => persistAway(true));
+  window.addEventListener("beforeunload", () => persistAway(true));
+  window.addEventListener("freeze", () => persistAway(true));
+  window.addEventListener("pageshow", () => resumePresence());
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) persistAway(false);
     else resumePresence();
@@ -2809,5 +3548,29 @@ document.addEventListener("DOMContentLoaded", boot);
 window.GY = {
   state: () => state,
   ui: () => ui,
-  render: () => render()
+  render: () => render(),
+  portraitDebug: () => {
+    const fn = famousNames();
+    const fileToNames = {};
+    Object.keys(PORTRAIT_NAMED).forEach((n) => {
+      const f = PORTRAIT_NAMED[n];
+      if (!fileToNames[f]) fileToNames[f] = [];
+      fileToNames[f].push(n);
+    });
+    const els = document.querySelectorAll("img.portrait, canvas.portrait");
+    const srcCount = {};
+    Array.prototype.forEach.call(els, (el) => {
+      const s = el.currentSrc || el.src || el.tagName;
+      srcCount[s] = (srcCount[s] || 0) + 1;
+    });
+    const reused = Object.keys(srcCount).filter((s) => srcCount[s] > 1);
+    return {
+      famous: Object.keys(fn).length,
+      painted: els.length,
+      leftoverCanvas: document.querySelectorAll("canvas.js-port").length,
+      reused: reused.length,
+      reusedSamples: reused.slice(0, 8).map((s) => ({ n: srcCount[s], s: s.slice(0, 80) })),
+      namedFiles: fileToNames
+    };
+  }
 };
