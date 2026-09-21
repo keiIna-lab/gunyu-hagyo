@@ -32,6 +32,11 @@ let ui = {
   regMsg: "",
   rosterQuery: "",
   rosterHouse: "",
+  rosterScroll: 0,
+  playScroll: 0,
+  showRoster: false,
+  showActions: false,
+  confirmDlg: null,
   popupAt: 0,
   popupKey: "",
   setupPlayers: [{ name: "第一の君主", clanId: "oda" }]
@@ -946,8 +951,7 @@ function rosterListHtml() {
     .join("");
 }
 
-function renderTitle() {
-  const saved = E().hasSave();
+function renderRosterModal() {
   const houseOpts = rosterHouseOptions()
     .map(
       (o) =>
@@ -960,6 +964,111 @@ function renderTitle() {
         "</option>"
     )
     .join("");
+  return (
+    '<div class="modal-bg" id="roster-bg"><div class="modal wide" role="dialog" aria-labelledby="roster-title">' +
+    '<div class="modal-head"><h2 id="roster-title">武将一覧</h2>' +
+    '<button class="btn ghost" type="button" data-close="roster" aria-label="閉じる">閉じる</button></div>' +
+    '<div class="body">' +
+    '<div class="row">' +
+    '<input class="search" id="roster-q" placeholder="名や家で探す" value="' +
+    (ui.rosterQuery || "").replace(/"/g, "&quot;") +
+    '">' +
+    '<label class="field">家<select id="roster-house">' +
+    houseOpts +
+    "</select></label>" +
+    "</div>" +
+    '<div class="gen-list title-gen-list" id="roster-list">' +
+    rosterListHtml() +
+    "</div></div>" +
+    '<div class="modal-foot"><button class="btn gold" type="button" data-close="roster">承知</button></div>' +
+    "</div></div>"
+  );
+}
+
+function extraPlayerActions() {
+  return [
+    {
+      id: "act-haizoku",
+      name: "配属",
+      cat: "家中",
+      desc: "武将帳から内政・軍事・文化へ配属する。配属中は能力が上がり、適性に応じて成長する。"
+    },
+    {
+      id: "act-chuzai",
+      name: "駐在",
+      cat: "家中",
+      desc: "武将帳から自領へ駐在を選べる。駐在している領地は守り・農・商がやや上がる。"
+    },
+    {
+      id: "act-takara",
+      name: "お宝",
+      cat: "家中",
+      desc: "宝探しや偶然で得た品は蔵帳から扱う。装備は武将が帯び、道具は自領で使い、家宝は毎期家に効く。"
+    }
+  ];
+}
+
+function actionCatalogHtml() {
+  const cats = D().catLabels || {};
+  const cmds = D().commands || {};
+  const parts = [];
+  Object.keys(cats).forEach((cat) => {
+    (cmds[cat] || []).forEach((c) => {
+      parts.push(
+        '<div class="action-item"><h3>' +
+          c.name +
+          '</h3><div class="cmdhelp-body">' +
+          cmdHelpBody(c.id) +
+          "</div></div>"
+      );
+    });
+  });
+  extraPlayerActions().forEach((a) => {
+    parts.push(
+      '<div class="action-item"><h3>' +
+        a.name +
+        '</h3><div class="cmdhelp-body"><p class="tiny">' +
+        a.cat +
+        "</p><p>" +
+        a.desc +
+        "</p></div></div>"
+    );
+  });
+  return parts.join("");
+}
+
+function renderActionsModal() {
+  return (
+    '<div class="modal-bg" id="actions-bg"><div class="modal wide" role="dialog" aria-labelledby="actions-title">' +
+    '<div class="modal-head"><h2 id="actions-title">行動一覧</h2>' +
+    '<button class="btn ghost" type="button" data-close="actions" aria-label="閉じる">閉じる</button></div>' +
+    '<div class="body">' +
+    actionCatalogHtml() +
+    "</div>" +
+    '<div class="modal-foot"><button class="btn gold" type="button" data-close="actions">承知</button></div>' +
+    "</div></div>"
+  );
+}
+
+function renderConfirm() {
+  const dlg = ui.confirmDlg;
+  if (!dlg) return "";
+  return (
+    '<div class="modal-bg over" id="confirm-bg"><div class="modal" role="dialog" aria-labelledby="confirm-title">' +
+    '<div class="modal-head"><h2 id="confirm-title">確認</h2>' +
+    '<button class="btn ghost" type="button" data-close="confirm" aria-label="閉じる">やめる</button></div>' +
+    '<div class="body"><p>' +
+    dlg.text +
+    "</p></div>" +
+    '<div class="modal-foot">' +
+    '<button class="btn gold" type="button" id="confirm-ok">承知</button>' +
+    '<button class="btn ghost" type="button" data-close="confirm">やめる</button>' +
+    "</div></div></div>"
+  );
+}
+
+function renderTitle() {
+  const saved = E().hasSave();
   return (
     '<div class="screen" style="--title-img:url(\'assets/castle.jpg\')">' +
     '<div class="title-wrap">' +
@@ -998,20 +1107,10 @@ function renderTitle() {
     '<button class="btn gold" id="btn-start">開戦</button>' +
     '<button class="btn ghost" id="btn-help">遊び方</button>' +
     '<button class="btn ghost" id="btn-records">戦績</button>' +
-    '<button class="btn ghost" id="btn-roster">武将一覧</button>' +
-    "</div></div>" +
-    '<div class="panel title-roster" id="title-roster">' +
-    " <h2>武将一覧</h2>" +
-    '<div class="row">' +
-    '<input class="search" id="roster-q" placeholder="名や家で探す" value="' +
-    (ui.rosterQuery || "").replace(/"/g, "&quot;") +
-    '">' +
-    '<label class="field">家<select id="roster-house">' +
-    houseOpts +
-    "</select></label>" +
     "</div>" +
-    '<div class="gen-list title-gen-list" id="roster-list">' +
-    rosterListHtml() +
+    '<div class="title-catalog">' +
+    '<button class="btn ghost" id="btn-roster" type="button">武将一覧</button>' +
+    '<button class="btn ghost" id="btn-actions" type="button">行動一覧</button>' +
     "</div></div>" +
     '<p class="tiny" style="margin-top:18px">画像は Wikimedia Commons のパブリックドメイン／CC作品を使用。城・米・甲冑・小判・長篠図屏風など。</p>' +
     "</div></div>"
@@ -1696,7 +1795,7 @@ function mapSVG() {
     })
     .join("");
   return (
-    '<svg viewBox="0 0 900 640" role="img" aria-label="戦国時代の六十余州図">' +
+    '<svg viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet" role="img" aria-label="戦国時代の六十余州図">' +
     "<defs>" +
     '<linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">' +
     '<stop offset="0" stop-color="#1e3a4a"/><stop offset="1" stop-color="#102028"/></linearGradient>' +
@@ -2079,9 +2178,6 @@ function renderGame() {
     queuePanel() +
     "</aside></div>" +
     logPanel() +
-    (state.winner && !state.winNoticeAck ? winModal() : state.popup ? eventModal(state.popup) : "") +
-    (ui.showStash ? stashModal() : "") +
-    overlayHtml() +
     "</div>"
   );
 }
@@ -2522,10 +2618,21 @@ function renderRecords() {
 
 function overlayHtml() {
   return (
+    (ui.showRoster ? renderRosterModal() : "") +
+    (ui.showActions ? renderActionsModal() : "") +
     (ui.showHelp ? renderHelp() : "") +
     (ui.showRecords ? renderRecords() : "") +
     (ui.cmdHelp ? renderCmdHelp() : "") +
-    (ui.troopHelp ? renderTroopHelp() : "")
+    (ui.troopHelp ? renderTroopHelp() : "") +
+    (ui.confirmDlg ? renderConfirm() : "")
+  );
+}
+
+function noticeHtml() {
+  if (ui.screen !== "game" || !state) return "";
+  return (
+    (ui.showStash ? stashModal() : "") +
+    (state.winner && !state.winNoticeAck ? winModal() : state.popup ? eventModal(state.popup) : "")
   );
 }
 
@@ -2640,8 +2747,66 @@ function clearGenLayer() {
   if (bg) bg.remove();
   const intro = $("#intro-bg");
   if (intro) intro.remove();
-  const host = document.getElementById("float");
-  if (host) host.replaceChildren();
+}
+
+function syncFloatOverlays() {
+  const host = floatRoot();
+  host.style.pointerEvents = "none";
+  let box = document.getElementById("ui-modals");
+  const html = overlayHtml() + noticeHtml();
+  if (!html) {
+    if (box) box.remove();
+  } else {
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "ui-modals";
+      host.appendChild(box);
+    } else {
+      host.appendChild(box);
+    }
+    box.innerHTML = html;
+  }
+  if (!host.children.length) host.replaceChildren();
+}
+
+function saveRosterScroll() {
+  const list = $("#roster-list");
+  if (list) ui.rosterScroll = list.scrollTop;
+}
+
+function restoreRosterScroll() {
+  const apply = () => {
+    if (ui.screen !== "title") return;
+    const list = $("#roster-list");
+    if (list && ui.rosterScroll != null) list.scrollTop = ui.rosterScroll;
+  };
+  apply();
+  requestAnimationFrame(apply);
+}
+
+function setPlayChrome() {
+  document.documentElement.classList.toggle("in-game", ui.screen === "game");
+}
+
+function pinPlayView() {
+  if (ui.screen !== "game") return;
+  const layY = ui.playScroll || 0;
+  const apply = () => {
+    if (ui.screen !== "game") return;
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const app = $("#app");
+    if (app) app.scrollTop = 0;
+    const hud = document.querySelector(".hud");
+    if (hud) hud.scrollTop = 0;
+    const map = $("#map");
+    if (map) map.scrollTop = 0;
+    const lay = document.querySelector(".layout");
+    if (lay) lay.scrollTop = layY;
+  };
+  apply();
+  requestAnimationFrame(apply);
 }
 
 function syncIntroLayer() {
@@ -2709,45 +2874,64 @@ function refreshRoster() {
 
 function render() {
   const app = $("#app");
+  const enteringGame = ui.screen === "game" && !document.querySelector(".hud");
+  if (ui.screen === "title") saveRosterScroll();
+  else if (!enteringGame) {
+    const lay = document.querySelector(".layout");
+    if (lay) ui.playScroll = lay.scrollTop;
+  }
   const keep = {
     log: $(".log") && $(".log").scrollTop,
     queue: $(".queue") && $(".queue").scrollTop,
     cmd: $(".cmd-grid") && $(".cmd-grid").scrollTop,
     gens: $("#gen-list") && $("#gen-list").scrollTop,
     focus: document.activeElement && document.activeElement.id,
-    gq: $("#gq") && $("#gq").selectionStart,
-    roster: $("#roster-list") && $("#roster-list").scrollTop
+    gq: $("#gq") && $("#gq").selectionStart
   };
+  setPlayChrome();
   if (ui.screen === "title") {
     ui.showGens = false;
     ui.genIntro = null;
-    clearGenLayer();
-    app.innerHTML = renderTitle() + overlayHtml();
+    ui.showStash = false;
+    ui.cmdHelp = null;
+    ui.troopHelp = null;
+    app.innerHTML = renderTitle();
     renderSetupPlayers();
+    syncGenLayer();
+    syncFloatOverlays();
     bindTitle();
-    if (keep.roster && $("#roster-list")) $("#roster-list").scrollTop = keep.roster;
+    restoreRosterScroll();
     paintQueuedPortraits();
     return;
   }
+  ui.showRoster = false;
+  ui.showActions = false;
   if (keep.gens != null) ui.genScroll = keep.gens;
   const gBody = $("#g-body") || $("#g-bg .body");
   if (gBody) ui.genBodyScroll = gBody.scrollTop;
   app.innerHTML = renderGame();
-  bindGame();
   syncGenLayer();
+  syncFloatOverlays();
+  bindGame();
   paintQueuedPortraits();
   if (keep.log && $(".log")) $(".log").scrollTop = keep.log;
   if (keep.queue && $(".queue")) $(".queue").scrollTop = keep.queue;
   if (keep.cmd && $(".cmd-grid")) $(".cmd-grid").scrollTop = keep.cmd;
   if (keep.focus && $("#" + keep.focus) && keep.focus !== "clock") {
     const el = $("#" + keep.focus);
-    el.focus();
+    try {
+      el.focus({ preventScroll: true });
+    } catch (e) {
+      el.focus();
+    }
     if (keep.focus === "gq" && typeof keep.gq === "number" && el.setSelectionRange) {
       try {
         el.setSelectionRange(keep.gq, keep.gq);
       } catch (e) {}
     }
   }
+  if (enteringGame) ui.playScroll = 0;
+  pinPlayView();
 }
 
 function bindTitle() {
@@ -2845,8 +3029,27 @@ function bindRoster() {
   const jump = $("#btn-roster");
   if (jump) {
     jump.onclick = () => {
-      const el = $("#title-roster");
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      ui.showRoster = true;
+      ui.showActions = false;
+      ui.showHelp = false;
+      ui.showRecords = false;
+      ui.cmdHelp = null;
+      ui.troopHelp = null;
+      ui.genIntro = null;
+      render();
+    };
+  }
+  const acts = $("#btn-actions");
+  if (acts) {
+    acts.onclick = () => {
+      ui.showActions = true;
+      ui.showRoster = false;
+      ui.showHelp = false;
+      ui.showRecords = false;
+      ui.cmdHelp = null;
+      ui.troopHelp = null;
+      ui.genIntro = null;
+      render();
     };
   }
 }
@@ -2880,6 +3083,11 @@ function registerPlayerName(raw) {
   render();
 }
 
+function askConfirm(text, onYes) {
+  ui.confirmDlg = { text: text, yes: onYes };
+  render();
+}
+
 function closeOverlay(kind) {
   if (kind === "help") ui.showHelp = false;
   if (kind === "records") {
@@ -2888,6 +3096,13 @@ function closeOverlay(kind) {
   }
   if (kind === "cmdhelp") ui.cmdHelp = null;
   if (kind === "troophelp") ui.troopHelp = null;
+  if (kind === "roster") ui.showRoster = false;
+  if (kind === "actions") ui.showActions = false;
+  if (kind === "confirm") {
+    ui.confirmDlg = null;
+    render();
+    return;
+  }
   if (kind === "intro") {
     ui.genIntro = null;
     syncIntroLayer();
@@ -2901,6 +3116,8 @@ function bindOverlays() {
   if (helpBtn) {
     helpBtn.onclick = () => {
       ui.showHelp = true;
+      ui.showRoster = false;
+      ui.showActions = false;
       ui.cmdHelp = null;
       ui.troopHelp = null;
       ui.genIntro = null;
@@ -2912,6 +3129,8 @@ function bindOverlays() {
     recBtn.onclick = () => {
       ui.showRecords = true;
       ui.recordFocus = null;
+      ui.showRoster = false;
+      ui.showActions = false;
       ui.cmdHelp = null;
       ui.troopHelp = null;
       ui.genIntro = null;
@@ -2929,12 +3148,28 @@ function bindOverlays() {
     ["rec-bg", "records"],
     ["cmdhelp-bg", "cmdhelp"],
     ["troophelp-bg", "troophelp"],
-    ["intro-bg", "intro"]
+    ["intro-bg", "intro"],
+    ["roster-bg", "roster"],
+    ["actions-bg", "actions"],
+    ["confirm-bg", "confirm"],
+    ["ev-bg", ""],
+    ["s-bg", ""]
   ].forEach((pair) => {
     const bg = $("#" + pair[0]);
     if (!bg) return;
     bg.onclick = (e) => {
-      if (e.target === bg) closeOverlay(pair[1]);
+      if (e.target !== bg) return;
+      if (pair[0] === "ev-bg") {
+        dismissNotice();
+        render();
+        return;
+      }
+      if (pair[0] === "s-bg") {
+        ui.showStash = false;
+        render();
+        return;
+      }
+      closeOverlay(pair[1]);
     };
   });
   const recBack = $("#rec-back");
@@ -2952,10 +3187,11 @@ function bindOverlays() {
   });
   document.querySelectorAll("[data-recdel]").forEach((el) => {
     el.onclick = () => {
-      if (!confirm("このプレイヤー名と過去の戦績を削除するか？")) return;
-      E().deleteRecordPlayer(el.dataset.recdel);
-      if (ui.recordFocus === el.dataset.recdel) ui.recordFocus = null;
-      render();
+      askConfirm("このプレイヤー名と過去の戦績を削除するか？", () => {
+        E().deleteRecordPlayer(el.dataset.recdel);
+        if (ui.recordFocus === el.dataset.recdel) ui.recordFocus = null;
+        render();
+      });
     };
   });
   const recReg = $("#rec-reg");
@@ -2964,6 +3200,16 @@ function bindOverlays() {
       const inp = $("#rec-reg-name");
       ui.showRecords = true;
       registerPlayerName(inp ? inp.value : "");
+    };
+  }
+  const cok = $("#confirm-ok");
+  if (cok) {
+    cok.onclick = (e) => {
+      e.stopPropagation();
+      const fn = ui.confirmDlg && ui.confirmDlg.yes;
+      ui.confirmDlg = null;
+      if (fn) fn();
+      else render();
     };
   }
 }
@@ -3368,35 +3614,39 @@ function bindGame() {
     bw.onclick = () => {
       const clan = myClan();
       if (!clan || !clan.alive) return;
-      if (!confirm("国土も家もすべて捨てて放浪するか。これは敗北となる。")) return;
-      const err = E().wanderClan(state, clan);
-      if (err) {
-        alert(err);
-        return;
-      }
-      if (!state.winner) {
-        const next = (state.players || []).find((p) => {
-          const c = state.clanById[p.clanId];
-          return c && c.alive;
-        });
-        if (next) state.currentPlayerId = next.id;
-      }
-      E().save(state);
-      render();
+      askConfirm("国土も家もすべて捨てて放浪するか。これは敗北となる。", () => {
+        const err = E().wanderClan(state, clan);
+        if (err) {
+          alert(err);
+          render();
+          return;
+        }
+        if (!state.winner) {
+          const next = (state.players || []).find((p) => {
+            const c = state.clanById[p.clanId];
+            return c && c.alive;
+          });
+          if (next) state.currentPlayerId = next.id;
+        }
+        E().save(state);
+        render();
+      });
     };
   }
   const bew = $("#btn-endwar");
   if (bew) {
     bew.onclick = () => {
       if (!state || state.winner) return;
-      if (!confirm("戦争を終えるか。この時点の国土と文化度で六家の順位を定め、乱世を閉じる。")) return;
-      const err = E().endWar(state);
-      if (err) {
-        alert(err);
-        return;
-      }
-      E().save(state);
-      render();
+      askConfirm("戦争を終えるか。この時点の国土と文化度で六家の順位を定め、乱世を閉じる。", () => {
+        const err = E().endWar(state);
+        if (err) {
+          alert(err);
+          render();
+          return;
+        }
+        E().save(state);
+        render();
+      });
     };
   }
   const sc = $("#s-close");
@@ -3527,17 +3777,29 @@ function tick() {
 }
 
 function boot() {
+  if (history.scrollRestoration) history.scrollRestoration = "manual";
   ui.sub = D().commands.domestic[0].id;
   ensureSeats();
   clearGenLayer();
-  E().load();
+  state = E().load();
+  if (state) {
+    ui.screen = "game";
+    ui.showRoster = false;
+    ui.showActions = false;
+    ui.playScroll = 0;
+  }
+  setPlayChrome();
   render();
+  if (ui.screen === "game") pinPlayView();
   if (clockTimer) clearInterval(clockTimer);
   clockTimer = setInterval(tick, 250);
   window.addEventListener("pagehide", () => persistAway(true));
   window.addEventListener("beforeunload", () => persistAway(true));
   window.addEventListener("freeze", () => persistAway(true));
-  window.addEventListener("pageshow", () => resumePresence());
+  window.addEventListener("pageshow", () => {
+    resumePresence();
+    if (ui.screen === "game") pinPlayView();
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) persistAway(false);
     else resumePresence();

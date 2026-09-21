@@ -320,6 +320,70 @@ window.GYEngine = (function () {
     if (state.log.length > 400) state.log.length = 400;
   }
 
+  function snapRes(clan, prov) {
+    if (!clan) return null;
+    return {
+      gold: clan.gold || 0,
+      rice: clan.rice || 0,
+      culture: clan.culture || 0,
+      honor: clan.honor || 0,
+      soldiers: troopTotal(clan),
+      disasterResist: clan.disasterResist || 0,
+      people: clan.people || 0,
+      cap: clan.cap || 0,
+      train: clan.train || 0,
+      fort: prov ? prov.fort || 0 : null,
+      agri: prov ? prov.agri || 0 : null,
+      commerce: prov ? prov.commerce || 0 : null,
+      pop: prov ? prov.pop || 0 : null,
+      unrest: prov ? prov.unrest || 0 : null,
+      land: prov ? prov.land || 0 : null
+    };
+  }
+
+  function deltaText(before, after) {
+    if (!before || !after) return "";
+    const labels = [
+      ["gold", "金"],
+      ["rice", "米"],
+      ["culture", "文化"],
+      ["honor", "名誉"],
+      ["soldiers", "兵"],
+      ["disasterResist", "天災耐性"],
+      ["people", "民衆"],
+      ["cap", "蔵上限"],
+      ["train", "訓練"],
+      ["fort", "守り"],
+      ["agri", "農"],
+      ["commerce", "商"],
+      ["pop", "人口"],
+      ["unrest", "動揺"],
+      ["land", "国土"]
+    ];
+    const parts = [];
+    labels.forEach(([k, lab]) => {
+      if (before[k] == null || after[k] == null) return;
+      let n = after[k] - before[k];
+      if (k === "train") {
+        if (Math.abs(n) < 0.05) return;
+        n = Math.round(n * 10) / 10;
+      } else {
+        n = Math.round(n);
+        if (!n) return;
+      }
+      parts.push(lab + (n > 0 ? "+" : "") + n);
+    });
+    return parts.join("　");
+  }
+
+  function appendDelta(state, before, after) {
+    const d = deltaText(before, after);
+    if (!d || !state.log || !state.log[0]) return d;
+    const line = state.log[0];
+    if (line.text && line.text.indexOf(d) < 0) line.text = line.text.replace(/\s*$/, "") + " " + d;
+    return d;
+  }
+
   function isTalentPopup(pop) {
     if (!pop) return false;
     if (pop.kind === "genius") return true;
@@ -1648,7 +1712,6 @@ window.GYEngine = (function () {
       log(state, clan.name + "は財が足りず「" + def.name + "」を行えなかった。", "fail", clan.id);
       return;
     }
-    pay(clan, def.cost);
     const g = officer(state, cmd, clan.id);
     const pol = statOf(g, "politics");
     const intel = statOf(g, "intellect");
@@ -1658,6 +1721,9 @@ window.GYEngine = (function () {
     const prov = cmd.targetProvince ? state.provById[cmd.targetProvince] : null;
     const other = cmd.targetClan ? state.clanById[cmd.targetClan] : null;
     const id = def.id;
+    const faithLog = found.cat === "culture" || id === "sp-kito";
+    const before = faithLog ? snapRes(clan, prov) : null;
+    pay(clan, def.cost);
 
     function ownProv() {
       return prov && prov.owner === clan.id;
@@ -2089,6 +2155,7 @@ window.GYEngine = (function () {
     } else {
       log(state, "「" + def.name + "」は対象が合わず不発だった。", "fail", clan.id);
     }
+    if (before) appendDelta(state, before, snapRes(clan, prov));
   }
 
   function production(state) {
@@ -2150,6 +2217,7 @@ window.GYEngine = (function () {
     const geniusBonus = generalsOf(state, clan.id).some((g) => g.skill === "仙術");
     const doctor = generalsOf(state, clan.id).some((g) => g.skill === "医聖");
 
+    const before = snapRes(clan, prov);
     if (ev.kind === "disaster") {
       if (rand() < resist) {
         log(state, clan.name + "は備えがあり、" + ev.name + "の被害を免れた。", "event", clan.id);
@@ -2166,16 +2234,21 @@ window.GYEngine = (function () {
         if (ev.id === "quake" || ev.id === "fire") prov.fort = Math.max(0, prov.fort - 1);
         if (ev.id === "flood" || ev.id === "famine") prov.agri = Math.max(1, prov.agri - 1);
       }
-      state.popup = { kind: "disaster", title: ev.name, text: clan.name + " — " + ev.text, img: D().images.sakura };
-      log(state, "【天災】" + clan.name + "に" + ev.name + "。" + ev.text, "event", clan.id);
+      if (geniusBonus && rand() < 0.5) clan.rice += 40;
+      const d = deltaText(before, snapRes(clan, prov));
+      const tail = d ? " " + d : "";
+      state.popup = { kind: "disaster", title: ev.name, text: clan.name + " — " + ev.text + tail, img: D().images.sakura };
+      log(state, "【天災】" + clan.name + "に" + ev.name + "。" + ev.text + tail, "event", clan.id);
     } else if (ev.kind === "blessing") {
       if (ev.id === "harvest") clan.rice += 180;
       if (ev.id === "goldmine") clan.gold += 220;
       if (ev.id === "babyboom" && prov) prov.pop += 14;
       if (ev.id === "rain") clan.rice += 90;
       if (ev.id === "fair") clan.gold += 120;
-      state.popup = { kind: "blessing", title: ev.name, text: clan.name + " — " + ev.text, img: D().images.rice };
-      log(state, "【お恵み】" + clan.name + "に" + ev.name + "。" + ev.text, "event", clan.id);
+      const d = deltaText(before, snapRes(clan, prov));
+      const tail = d ? " " + d : "";
+      state.popup = { kind: "blessing", title: ev.name, text: clan.name + " — " + ev.text + tail, img: D().images.rice };
+      log(state, "【お恵み】" + clan.name + "に" + ev.name + "。" + ev.text + tail, "event", clan.id);
     } else if (ev.kind === "genius" || ev.id === "sangoku") {
       const g = pickRecruit(state, rand, false);
       if (g) {
@@ -2202,9 +2275,6 @@ window.GYEngine = (function () {
         img: D().images.gold
       };
       log(state, "【お宝】" + clan.name + "が" + ev.name + "（金+" + gold + extra + "）。", "event", clan.id);
-    }
-    if (geniusBonus && ev.kind === "disaster" && rand() < 0.5) {
-      clan.rice += 40;
     }
   }
 

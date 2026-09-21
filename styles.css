@@ -16,6 +16,18 @@ html, body {
   background: #0b0704;
   color: var(--paper);
   font-family: "Shippori Mincho", "Yu Mincho", "Hiragino Mincho ProN", serif;
+  overflow-anchor: none;
+}
+html.in-game,
+html.in-game body {
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+html.in-game #app {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 button, input, select {
   font-family: inherit;
@@ -116,11 +128,17 @@ button { cursor: pointer; }
 
 .hud {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   min-height: 100vh;
+  min-height: 100dvh;
   background:
     linear-gradient(180deg, rgba(8,6,4,.82), rgba(8,6,4,.9)),
     url("assets/sakura.jpg") center/cover fixed;
+}
+html.in-game .hud {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 .topbar {
   display: grid;
@@ -130,6 +148,8 @@ button { cursor: pointer; }
   padding: 8px 12px;
   background: rgba(8,5,2,.88);
   border-bottom: 1px solid var(--gold);
+  position: relative;
+  z-index: 8;
 }
 .brand {
   font-size: 20px;
@@ -178,6 +198,7 @@ button { cursor: pointer; }
   padding: 8px;
   min-height: 0;
 }
+html.in-game .layout { overflow: hidden; }
 .map-wrap {
   background: var(--sea);
   border: 1px solid var(--gold);
@@ -186,6 +207,20 @@ button { cursor: pointer; }
   min-height: 520px;
 }
 .map-wrap svg { width: 100%; height: 100%; display: block; }
+html.in-game .map-wrap {
+  min-height: 0;
+  height: 100%;
+}
+html.in-game .map-wrap svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+html.in-game .side {
+  min-height: 0;
+  overflow: auto;
+}
 .res.troop-frame {
   cursor: help;
   user-select: none;
@@ -404,7 +439,9 @@ button { cursor: pointer; }
   pointer-events: none;
 }
 #float:empty { display: none; }
-#float > .modal-bg { pointer-events: auto; }
+#float > .modal-bg,
+#float .modal-bg { pointer-events: auto; }
+#ui-modals { pointer-events: none; }
 .modal-bg {
   position: fixed;
   inset: 0;
@@ -491,6 +528,15 @@ button { cursor: pointer; }
   text-align: left;
 }
 .reg-msg { color: var(--gold); margin: 6px 0 0; }
+.title-catalog {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin: 12px auto 0;
+  max-width: 280px;
+}
+.title-catalog .btn { width: 100%; }
 .title-roster {
   margin-top: 28px;
   text-align: left;
@@ -504,6 +550,18 @@ button { cursor: pointer; }
 .title-gen-list {
   max-height: min(52vh, 520px);
 }
+.action-item {
+  padding: 10px 0 12px;
+  border-bottom: 1px solid rgba(212, 180, 90, 0.15);
+  text-align: left;
+}
+.action-item h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+.action-item .cmdhelp-body p { margin: 4px 0; }
 .gen-list { max-height: 360px; overflow: auto; }
 .gen {
   display: grid;
@@ -624,4 +682,9 @@ button:disabled { opacity: 0.4; cursor: default; }
   .topbar { grid-template-columns: 1fr; }
   .timer-box { text-align: left; }
   .player-card { grid-template-columns: 1fr 1fr; }
+  html.in-game .layout { overflow: auto; }
+  html.in-game .map-wrap {
+    min-height: 240px;
+    height: min(46vh, 420px);
+  }
 }
