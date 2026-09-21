@@ -34,6 +34,7 @@ let ui = {
   rosterHouse: "",
   rosterScroll: 0,
   playScroll: 0,
+  logFilter: "all",
   showRoster: false,
   showActions: false,
   confirmDlg: null,
@@ -2018,15 +2019,45 @@ function queuePanel() {
   );
 }
 
+function tableSeats() {
+  if (state.seats && state.seats.length) return state.seats.slice(0, 6);
+  return (state.players || []).slice(0, 6);
+}
+
+function tableClanIds() {
+  return new Set(tableSeats().map((s) => s.clanId).filter(Boolean));
+}
+
 function logPanel() {
   const clan = myClan();
+  const mode = ui.logFilter === "seats" || ui.logFilter === "mine" ? ui.logFilter : "all";
+  const seats = tableClanIds();
+  const ownId = clan ? clan.id : null;
+  const filtered = (state.log || []).filter((l) => {
+    if (mode === "mine") return !!(ownId && l.clanId === ownId);
+    if (mode === "seats") return (l.kind === "system" && !l.clanId) || seats.has(l.clanId);
+    return true;
+  });
+  const cap = mode === "mine" ? 48 : 80;
+  const rows = filtered.slice(0, cap);
   const line = (l) => '<div class="' + l.kind + '">[' + l.era + "] " + l.text + "</div>";
-  const own = clan ? state.log.filter((l) => l.clanId === clan.id).slice(0, 16) : [];
-  const rest = state.log.filter((l) => !clan || l.clanId !== clan.id).slice(0, 24);
+  const btn = (id, label) =>
+    '<button type="button" class="log-f' +
+    (mode === id ? " on" : "") +
+    '" data-logf="' +
+    id +
+    '">' +
+    label +
+    "</button>";
   return (
-    '<div class="log-wrap"><div class="log-head">行動ログ</div><div class="log">' +
-    (own.length ? own.map(line).join("") + '<div class="log-split">諸国の動き</div>' : "") +
-    rest.map(line).join("") +
+    '<div class="log-wrap">' +
+    '<div class="log-head"><span>行動ログ</span><div class="log-filters">' +
+    btn("all", "全員") +
+    btn("seats", "参加者6名") +
+    btn("mine", "自分のみ") +
+    "</div></div>" +
+    '<div class="log">' +
+    (rows.length ? rows.map(line).join("") : '<div class="tiny">この範囲の記録はまだない。</div>') +
     "</div></div>"
   );
 }
@@ -3430,6 +3461,12 @@ function bindGame() {
   document.querySelectorAll("[data-pl]").forEach((el) => {
     el.onclick = () => {
       state.currentPlayerId = el.dataset.pl;
+      render();
+    };
+  });
+  document.querySelectorAll("[data-logf]").forEach((el) => {
+    el.onclick = () => {
+      ui.logFilter = el.dataset.logf === "seats" || el.dataset.logf === "mine" ? el.dataset.logf : "all";
       render();
     };
   });

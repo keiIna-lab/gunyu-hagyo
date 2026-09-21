@@ -441,11 +441,33 @@ html.in-game .side {
   border: 1px solid var(--line);
 }
 .log-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
   padding: 4px 10px;
   font-size: 12px;
   letter-spacing: 0.12em;
   color: var(--gold);
   border-bottom: 1px solid var(--line);
+}
+.log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.log-f {
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  background: #1a120c;
+  color: var(--paper);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+.log-f.on {
+  background: var(--blood);
+  border-color: var(--gold);
 }
 .log {
   height: auto;
