@@ -2019,13 +2019,15 @@ function queuePanel() {
 }
 
 function logPanel() {
+  const clan = myClan();
+  const line = (l) => '<div class="' + l.kind + '">[' + l.era + "] " + l.text + "</div>";
+  const own = clan ? state.log.filter((l) => l.clanId === clan.id).slice(0, 16) : [];
+  const rest = state.log.filter((l) => !clan || l.clanId !== clan.id).slice(0, 24);
   return (
-    '<div class="log">' +
-    state.log
-      .slice(0, 40)
-      .map((l) => '<div class="' + l.kind + '">[' + l.era + "] " + l.text + "</div>")
-      .join("") +
-    "</div>"
+    '<div class="log-wrap"><div class="log-head">行動ログ</div><div class="log">' +
+    (own.length ? own.map(line).join("") + '<div class="log-split">諸国の動き</div>' : "") +
+    rest.map(line).join("") +
+    "</div></div>"
   );
 }
 
@@ -2104,8 +2106,10 @@ function renderGame() {
     '<button class="btn ghost" id="btn-records">戦績</button>' +
     (state.winner && state.winNoticeAck ? '<button class="btn gold" id="btn-new">新たなる乱世</button>' : "") +
     "</div></div></header>" +
-    '<div class="layout"><div class="map-wrap" id="map">' +
+    '<div class="layout"><div class="map-col"><div class="map-wrap" id="map">' +
     mapSVG() +
+    "</div>" +
+    logPanel() +
     '</div><aside class="side">' +
     '<div class="panel row">' +
     state.players
@@ -2176,9 +2180,7 @@ function renderGame() {
     })() +
     cmdPanel() +
     queuePanel() +
-    "</aside></div>" +
-    logPanel() +
-    "</div>"
+    "</aside></div></div>"
   );
 }
 

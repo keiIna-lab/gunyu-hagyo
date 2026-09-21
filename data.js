@@ -145,11 +145,11 @@ window.GY_DATA = (function () {
       { id: "dip-kowu", name: "講和", desc: "戦争状態を終わらせる。", cost: { gold: 70 }, target: "clan" },
       { id: "dip-sensen", name: "宣戦布告", desc: "名を正して戦を始める。大義が立つ。", cost: {}, target: "clan" },
       { id: "dip-fukashin", name: "不可侵", desc: "不可侵条約を結び、短期の平和を買う。", cost: { gold: 50 }, target: "clan" },
-      { id: "dip-kyodo", name: "共同出兵", desc: "同盟国の隣国へ、共に圧力をかける。", cost: { gold: 40 }, target: "clan" },
+      { id: "dip-kyodo", name: "共同出兵", desc: "同盟国の隣国へ、共に圧力をかける。敵がいねば盟を固める。", cost: { gold: 40 }, target: "clan" },
       { id: "dip-hikinuki", name: "引き抜き", desc: "相手の武将を金で誘う。", cost: { gold: 200 }, target: "clan" },
       { id: "dip-choho", name: "諜報", desc: "相手家の金・米・兵・民衆など内情を探る。地図の詳細に十期ほど残る。", cost: { gold: 30 }, target: "clan" },
       { id: "dip-tsusho", name: "通商協定", desc: "交易し、双方の金が増える。", cost: { gold: 40 }, target: "clan" },
-      { id: "dip-chukai", name: "仲介講和", desc: "他国同士の和睦を取り持つ。", cost: { gold: 50 }, target: "clan" },
+      { id: "dip-chukai", name: "仲介講和", desc: "他国同士の和睦を取り持つ。戦がなければ交誼を温める。", cost: { gold: 50 }, target: "clan" },
       { id: "dip-kofuku", name: "降伏勧告", desc: "弱った相手に下るよう勧める。", cost: { gold: 20 }, target: "clan" }
     ],
     war: [
@@ -166,7 +166,7 @@ window.GY_DATA = (function () {
       { id: "war-teppo", name: "鉄砲斉射", desc: "鉄砲隊で防衛を無視して撃つ。", cost: { gold: 90 }, target: "province", soldiers: true },
       { id: "war-chohei", name: "徴兵", desc: "民衆から兵種を選んで募る。足軽は安く多く、騎馬・鉄砲は高く少なく入る。", cost: { gold: 40, rice: 40 }, target: "province", unit: true },
       { id: "war-kunren", name: "訓練", desc: "兵の質を上げ、次の戦いを強くする。", cost: { gold: 50, rice: 30 }, target: "none" },
-      { id: "war-tenshin", name: "転進", desc: "兵を別の自領へ移す。", cost: { rice: 15 }, target: "province", soldiers: true },
+      { id: "war-tenshin", name: "転進", desc: "兵を別の自領へ移し、布陣と駐在を固める。", cost: { rice: 15 }, target: "province", soldiers: true },
       { id: "war-tettai", name: "撤退", desc: "前線の兵を本拠へ戻し、損害を減らす。", cost: {}, target: "none" }
     ],
     special: [
@@ -179,7 +179,7 @@ window.GY_DATA = (function () {
       { id: "sp-takara", name: "宝探し", desc: "自領で埋もれた宝を探す。装備・道具・永続の宝が出ることがある。", cost: { gold: 20 }, target: "province" },
       { id: "sp-kito", name: "祈祷", desc: "社寺に祈り、天災を遠ざける。", cost: { gold: 40, rice: 20 }, target: "none" },
       { id: "sp-tansaku", name: "探索", desc: "領内や街道を歩き、浪人や埋もれた人材を探す。", cost: { gold: 50, rice: 20 }, target: "none" },
-      { id: "sp-inkyo", name: "隠居相続", desc: "当主を若く強い武将へ譲る。", cost: {}, target: "none" },
+      { id: "sp-inkyo", name: "隠居相続", desc: "当主を若く強い武将へ譲る。すでに適えば政務を引き締める。", cost: {}, target: "none" },
       { id: "sp-ronin", name: "浪人登用", desc: "牢人や稀代の客将を召し抱える。", cost: { gold: 90, rice: 40 }, target: "none" },
       { id: "sp-kinri", name: "禁裏工作", desc: "朝廷の威を借り、文化と大義を得る。", cost: { gold: 120 }, target: "none" },
       { id: "sp-ikki", name: "一揆扇動", desc: "敵領で一揆を起こさせ、兵と民を乱す。", cost: { gold: 80 }, target: "province" },

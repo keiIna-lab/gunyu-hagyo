@@ -1533,7 +1533,7 @@ window.GYEngine = (function () {
   }
 
   function cultureTail(gained) {
-    return gained ? "文化がわずかに開いた。" : "だが文化はすぐには積もらない。";
+    return gained ? "文化+1。" : "";
   }
 
   function captureOfficer(state, winner, loser, chance) {
@@ -1721,17 +1721,39 @@ window.GYEngine = (function () {
     const prov = cmd.targetProvince ? state.provById[cmd.targetProvince] : null;
     const other = cmd.targetClan ? state.clanById[cmd.targetClan] : null;
     const id = def.id;
-    const faithLog = found.cat === "culture" || id === "sp-kito";
-    const before = faithLog ? snapRes(clan, prov) : null;
+    const before = snapRes(clan, prov);
     pay(clan, def.cost);
 
     function ownProv() {
       return prov && prov.owner === clan.id;
     }
 
+    function easeOwnUnrest(n) {
+      const ps = clanProvinces(state, clan.id).slice().sort((a, b) => b.unrest - a.unrest);
+      if (!ps.length) return "";
+      const p = ps[0];
+      const cut = Math.min(n, p.unrest);
+      p.unrest = Math.max(0, p.unrest - n);
+      return cut ? p.name + "の動揺-" + cut : "";
+    }
+
+    function missRecruit(kind) {
+      const gold = 12 + Math.floor(rand() * 22);
+      clan.gold += gold;
+      clan.honor += 1;
+      const unrest = easeOwnUnrest(2);
+      log(
+        state,
+        clan.name + "は" + kind + "を得られなかったが、路銀" + gold + "と風聞を得た。" + (unrest ? unrest + "。" : ""),
+        "sp",
+        clan.id
+      );
+    }
+
     if (id === "dom-kaikon" && ownProv()) {
       if (prov.land >= 8) {
-        log(state, prov.name + "はこれ以上開墾できない。", "fail", clan.id);
+        prov.agri += 1;
+        log(state, prov.name + "は開墾の余地が尽きたが、田を手入れし農が上がった。", "dom", clan.id);
       } else {
         prov.land += 1;
         prov.agri += 1;
@@ -1869,8 +1891,12 @@ window.GYEngine = (function () {
       const near = foes.find((p) => clanProvinces(state, other.id).some((op) => adjacent(state, op.id, p.id)));
       if (near) {
         near.fort = Math.max(0, near.fort - 1);
-        log(state, clan.name + "と" + other.name + "が共同で" + near.name + "へ圧力をかけた。", "dip", clan.id);
-      } else log(state, "共同出兵の相手が見当たらなかった。", "dip", clan.id);
+        log(state, clan.name + "と" + other.name + "が共同で" + near.name + "へ圧力をかけた。守り-1。", "dip", clan.id);
+      } else {
+        clan.honor += 1;
+        other.honor += 1;
+        log(state, clan.name + "と" + other.name + "は共同出兵の備えを整え、盟を固めた。", "dip", clan.id);
+      }
     } else if (id === "dip-hikinuki" && other) {
       const cands = generalsOf(state, other.id).filter((x) => x.id !== other.daimyoId);
       cands.sort((a, b) => a.loyalty - b.loyalty);
@@ -1899,8 +1925,13 @@ window.GYEngine = (function () {
       const wars = other.warWith.slice();
       if (wars[0]) {
         setWar(state, other.id, wars[0], false);
+        clan.honor += 2;
         log(state, clan.name + "の仲介で" + other.name + "が和睦へ動いた。", "dip", clan.id);
-      } else log(state, "取り持つべき戦いがなかった。", "dip", clan.id);
+      } else {
+        clan.honor += 2;
+        other.honor += 1;
+        log(state, clan.name + "は" + other.name + "と交誼を温め、戦なき世を約した。", "dip", clan.id);
+      }
     } else if (id === "dip-kofuku" && other) {
       const myL = landOf(state, clan.id);
       const thL = landOf(state, other.id);
@@ -1917,7 +1948,8 @@ window.GYEngine = (function () {
         log(state, clan.name + "が" + prov.name + "の守りを固めた。", "war", clan.id);
       } else if (id === "war-chohei" && ownProv()) {
         if (prov.pop < 20) {
-          log(state, prov.name + "は人が少なく、徴兵できなかった。", "fail", clan.id);
+          addTroops(clan, "ashigaru", 12);
+          log(state, prov.name + "は人が少ないが、志願の足軽が12加わった。", "war", clan.id);
         } else {
           const tdef = troopDef(cmd.unit || "ashigaru");
           const extra = { gold: tdef.gold || 0, rice: tdef.rice || 0 };
@@ -1936,7 +1968,23 @@ window.GYEngine = (function () {
         clan.train += 0.35;
         log(state, clan.name + "が軍を訓練した。", "war", clan.id);
       } else if (id === "war-tenshin" && ownProv()) {
-        log(state, clan.name + "が兵を" + prov.name + "へ転進させた。", "war", clan.id);
+        if (g) setStation(state, clan, g, prov.id);
+        prov.fort += 1;
+        prov.unrest = Math.max(0, prov.unrest - 3);
+        clan.train += 0.12;
+        const tdef = troopDef(cmd.unit || "ashigaru");
+        log(
+          state,
+          clan.name +
+            "が" +
+            (tdef ? tdef.name : "兵") +
+            "を" +
+            prov.name +
+            "へ転進させ、布陣を固めた。" +
+            (g ? g.name + "が駐在した。" : ""),
+          "war",
+          clan.id
+        );
       } else if (id === "war-tettai") {
         addTroops(clan, "ashigaru", 40);
         log(state, clan.name + "は兵を本拠へ退かせ、傷を癒した。", "war", clan.id);
@@ -1987,14 +2035,17 @@ window.GYEngine = (function () {
       generalsOf(state, other.id).forEach((x) => {
         x.loyalty = clamp(x.loyalty - 6, 1, 100);
       });
-      log(state, clan.name + "の流言が" + other.name + "の家中を揺らした。", "sp", clan.id);
+      log(state, clan.name + "の流言が" + other.name + "の家中を揺らした。忠誠-6。", "sp", clan.id);
     } else if (id === "sp-choryaku" && prov && prov.owner !== clan.id) {
       prov.fort = Math.max(0, prov.fort - 2);
       log(state, clan.name + "が" + prov.name + "を調略し、守りが緩んだ。", "sp", clan.id);
     } else if (id === "sp-naiou" && prov && prov.owner !== clan.id) {
       if (successRoll(rand, 0.18 + intel / 280)) {
         takeProvince(state, prov, clan.id, "内応により開城。");
-      } else log(state, prov.name + "の内応工作は失敗した。", "fail", clan.id);
+      } else {
+        recordProvIntel(state, clan, prov);
+        log(state, prov.name + "の内応工作は失敗したが、城の気配は掴んだ。守り" + prov.fort + "。", "fail", clan.id);
+      }
     } else if (id === "sp-mittei" && other) {
       recordClanIntel(state, clan, other);
       clanProvinces(state, other.id).forEach((p) => recordProvIntel(state, clan, p));
@@ -2019,7 +2070,12 @@ window.GYEngine = (function () {
           img: D().images.gold
         };
         log(state, clan.name + "が" + prov.name + "で宝を見つけ、金" + gold + extra, "event", clan.id);
-      } else log(state, "宝探しだったが、何も出なかった。", "sp", clan.id);
+      } else {
+        const gold = 18 + Math.floor(rand() * 28);
+        clan.gold += gold;
+        if (ownProv()) prov.unrest = Math.max(0, prov.unrest - 2);
+        log(state, clan.name + "は" + prov.name + "で宝を逃したが、金" + gold + "の手がかりを拾った。", "sp", clan.id);
+      }
     } else if (id === "sp-kito") {
       clan.disasterResist += 2;
       log(state, clan.name + "が祈祷を行い、天の加護を願った。", "sp", clan.id);
@@ -2038,13 +2094,23 @@ window.GYEngine = (function () {
               img: D().images.samurai
             };
           }
-        } else log(state, clan.name + "は探索したが、仕える士は得られなかった。", "fail", clan.id);
-      } else log(state, clan.name + "は探索したが、仕える士は得られなかった。", "fail", clan.id);
+        } else missRecruit("仕える士");
+      } else missRecruit("仕える士");
     } else if (id === "sp-inkyo") {
       const gs = generalsOf(state, clan.id).slice().sort((a, b) => b.leadership - a.leadership);
       if (gs[0] && gs[0].id !== clan.daimyoId) {
         clan.daimyoId = gs[0].id;
         log(state, gs[0].name + "が新たな当主となった。", "sp", clan.id);
+      } else {
+        const d = daimyoOf(state, clan.id);
+        if (d) {
+          d.politics = clamp(d.politics + 1, 1, 100);
+          clan.honor += 1;
+          log(state, d.name + "は隠居せず、政務を引き締めた。政+1。", "sp", clan.id);
+        } else {
+          clan.honor += 1;
+          log(state, clan.name + "は家督を整え、名誉を保った。", "sp", clan.id);
+        }
       }
     } else if (id === "sp-ronin") {
       const t = pickRecruit(state, rand, true);
@@ -2059,7 +2125,7 @@ window.GYEngine = (function () {
             img: D().images.samurai
           };
         }
-      } else log(state, clan.name + "は浪人を探したが、仕える士は得られなかった。", "fail", clan.id);
+      } else missRecruit("浪人");
     } else if (id === "sp-kinri") {
       const cg = tryCulture(state, clan, 0.28, cha);
       clan.honor += 8;
@@ -2155,7 +2221,7 @@ window.GYEngine = (function () {
     } else {
       log(state, "「" + def.name + "」は対象が合わず不発だった。", "fail", clan.id);
     }
-    if (before) appendDelta(state, before, snapRes(clan, prov));
+    appendDelta(state, before, snapRes(clan, prov));
   }
 
   function production(state) {
@@ -2713,7 +2779,6 @@ window.GYEngine = (function () {
         return "縁組できる未婚の姫を選んでください。";
       }
     }
-    if (def.id === "dom-kaikon" && prov && prov.land >= 8) return prov.name + "はこれ以上開墾できません。";
     if (def.unit || def.soldiers) {
       if (cmd.unit && !troopDef(cmd.unit)) return "兵種を選んでください。";
     }
