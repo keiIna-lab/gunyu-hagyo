@@ -85,7 +85,12 @@ window.GYEngine = (function () {
     return o;
   }
 
+  function isAllForceUnit(unit) {
+    return unit === "all" || unit === "mix";
+  }
+
   function troopDef(id) {
+    if (isAllForceUnit(id)) return null;
     return troopList().find((t) => t.id === id) || troopList()[0];
   }
 
@@ -179,6 +184,12 @@ window.GYEngine = (function () {
     const tot = troopList().reduce((s, t) => s + Math.max(0, (src && src[t.id]) || 0), 0);
     if (tot <= 0) {
       out.ashigaru = want;
+      return out;
+    }
+    if (want >= tot) {
+      troopList().forEach((t) => {
+        out[t.id] = Math.max(0, Math.floor((src && src[t.id]) || 0));
+      });
       return out;
     }
     let used = 0;
@@ -1580,7 +1591,7 @@ window.GYEngine = (function () {
           g.status = "ronin";
         }
       });
-      log(state, oc.name + "は滅び、" + nc.name + "が" + prov.name + "を含む遺領を接収した。", "war", newOwner);
+      log(state, oc.name + "は滅び、" + nc.name + "が" + prov.name + "を含む遺領を接収した。" + (reason ? reason : ""), "war", newOwner);
       if (captured.length) {
         log(state, nc.name + "が" + captured.map((g) => g.name).join("、") + "を捕虜として仕えた。", "war", newOwner);
       }
@@ -1614,8 +1625,10 @@ window.GYEngine = (function () {
     ensureTroops(atkClan);
     ensureTroops(defClan);
 
-    const want = Math.min(soldiers || Math.floor(troopTotal(atkClan) * 0.35), troopTotal(atkClan));
-    const unitId = unit && troopDef(unit) ? troopDef(unit).id : null;
+    const total = troopTotal(atkClan);
+    const allForce = isAllForceUnit(unit) || !unit;
+    const want = Math.min(Math.max(0, Math.floor(soldiers || total * 0.5)), total);
+    const unitId = !allForce && unit && troopDef(unit) ? troopDef(unit).id : null;
     let atkCounts;
     if (unitId) {
       const have = atkClan.troops[unitId] || 0;
@@ -1631,47 +1644,59 @@ window.GYEngine = (function () {
     }
 
     const defG = bestGeneral(state, defClan.id, "leadership") || generalsOf(state, defClan.id).find((x) => x.post === "military");
-    let atkMod = 1;
-    let defMod = 1 + provStat(state, prov, "fort") * 0.12 + defClan.fortBonus * 0.05;
-    if (style === "kyoshu") atkMod += 0.35;
-    if (style === "yashu") atkMod += g && statOf(g, "intellect") > 75 ? 0.5 : 0.1;
-    if (style === "kakei") atkMod += g && (statOf(g, "intellect") > 80 || g.skill === "美周郎") ? 0.55 : 0.15;
+    let atkMod = 1.2;
+    let defMod = 1 + Math.min(10, provStat(state, prov, "fort")) * 0.045 + defClan.fortBonus * 0.03;
+    if (style === "kyoshu") atkMod += 0.38;
+    if (style === "yashu") atkMod += g && statOf(g, "intellect") > 75 ? 0.52 : 0.16;
+    if (style === "kakei") atkMod += g && (statOf(g, "intellect") > 80 || g.skill === "美周郎") ? 0.58 : 0.18;
     if (style === "kihei") {
-      atkMod += 0.3 + (g && statOf(g, "valor") > 85 ? 0.2 : 0);
-      if ((atkCounts.cavalry || 0) / send >= 0.4) atkMod += 0.18;
+      atkMod += 0.34 + (g && statOf(g, "valor") > 85 ? 0.22 : 0);
+      if ((atkCounts.cavalry || 0) / send >= 0.4) atkMod += 0.2;
     }
     if (style === "teppo") {
-      atkMod += 0.4;
-      defMod *= 0.7;
-      if ((atkCounts.gun || 0) / send >= 0.4) atkMod += 0.16;
+      atkMod += 0.44;
+      defMod *= 0.62;
+      if ((atkCounts.gun || 0) / send >= 0.4) atkMod += 0.18;
     }
-    if (style === "hoi") defMod *= 0.85;
-    if (style === "fukuhei") defMod += 0.25;
+    if (style === "hoi") defMod *= 0.8;
+    if (style === "fukuhei") atkMod += 0.3;
+    if (style === "normal") atkMod += 0.08;
+    if (allForce) atkMod += 0.12;
     if (g && g.rare && g.skill === "飛将") atkMod += 0.35;
     if (g && g.rare && g.skill === "義勇") atkMod += 0.2;
     if (g && g.rare && g.skill === "遼来来") atkMod += 0.18;
 
     const atkPow =
       troopCombatPower(atkCounts, defClan.troops, "atk") *
-      (0.55 + (g ? statOf(g, "valor") + statOf(g, "leadership") : 80) / 280) *
+      (0.68 + (g ? statOf(g, "valor") + statOf(g, "leadership") : 80) / 260) *
       atkMod *
-      (0.85 + (atkClan.train + relicMods(atkClan).train) * 0.08);
+      (0.92 + (atkClan.train + relicMods(atkClan).train) * 0.08);
     const defPow =
-      Math.max(180, troopCombatPower(defClan.troops, atkCounts, "def") * 0.42) *
-      (0.5 + (defG ? statOf(defG, "leadership") + statOf(defG, "valor") : 70) / 280) *
+      Math.max(18, troopCombatPower(defClan.troops, atkCounts, "def") * 0.3) *
+      (0.46 + (defG ? statOf(defG, "leadership") + statOf(defG, "valor") : 70) / 320) *
       defMod;
 
     const ratio = atkPow / (defPow + 1);
-    const atkLoss = Math.floor(send * clamp(0.12 + (1 - Math.min(ratio, 1.6)) * 0.28, 0.08, 0.7));
-    const defLoss = Math.floor(troopTotal(defClan) * clamp(0.08 + ratio * 0.18, 0.05, 0.55));
+    const atkLoss = Math.floor(send * clamp(0.07 + (1 - Math.min(ratio, 1.8)) * 0.2, 0.04, 0.5));
+    const defLoss = Math.floor(troopTotal(defClan) * clamp(0.12 + ratio * 0.24, 0.09, 0.68));
     loseTroopsFrom(atkClan, atkCounts, atkLoss);
     loseTroopsFrom(defClan, Object.assign({}, defClan.troops), defLoss);
     prov.pop = Math.max(8, prov.pop - Math.floor(8 + rand() * 10));
-    const unitNote = unitId ? troopLabel(unitId) + "で" : "";
+    const unitNote = allForce
+      ? send >= total * 0.92
+        ? "全兵力で"
+        : "混成で"
+      : troopLabel(unitId) + "で";
 
-    if (ratio > 1.12 && (style !== "hyoro" && style !== "hoi" || ratio > 1.35)) {
-      takeProvince(state, prov, atkClan.id, g ? g.name + "の武功。" : "");
-      const back = Math.floor(send * 0.25);
+    const takeCut = style === "hyoro" || style === "hoi" || style === "mizuzeme" ? 1.08 : 0.88;
+    if (ratio > takeCut) {
+      takeProvince(
+        state,
+        prov,
+        atkClan.id,
+        unitNote + "攻め入り、" + (g ? g.name + "の武功。" : "")
+      );
+      const back = Math.floor(send * 0.18);
       if (unitId) addTroops(atkClan, unitId, back);
       else {
         const give = scaleTroopCounts(atkCounts, back);
@@ -1681,7 +1706,7 @@ window.GYEngine = (function () {
     } else if (style === "hoi" || style === "hyoro" || style === "mizuzeme") {
       prov.fort = Math.max(0, prov.fort - 1);
       defClan.rice = Math.max(0, defClan.rice - 60);
-      if (ratio > 0.9) captureOfficer(state, atkClan, defClan, 0.14);
+      if (ratio > 0.82) captureOfficer(state, atkClan, defClan, 0.16);
       log(
         state,
         atkClan.name + "が" + unitNote + prov.name + "を圧迫した（損害 攻" + atkLoss + "／守" + defLoss + "）。城兵は疲弊している。",
@@ -1972,12 +1997,12 @@ window.GYEngine = (function () {
         prov.fort += 1;
         prov.unrest = Math.max(0, prov.unrest - 3);
         clan.train += 0.12;
-        const tdef = troopDef(cmd.unit || "ashigaru");
+        const tdef = isAllForceUnit(cmd.unit) ? null : troopDef(cmd.unit || "ashigaru");
         log(
           state,
           clan.name +
             "が" +
-            (tdef ? tdef.name : "兵") +
+            (isAllForceUnit(cmd.unit) ? "全兵力" : tdef ? tdef.name : "兵") +
             "を" +
             prov.name +
             "へ転進させ、布陣を固めた。" +
@@ -2461,15 +2486,21 @@ window.GYEngine = (function () {
     if (foes.length && generalsOf(state, c.id).length < 11 && rand() < 0.28) {
       add(cmd("diplomacy", "dip-hikinuki", { targetClan: pick(rand, foes).id }));
     }
-    if (targets.length && c.soldiers > 520 && c.rice > 60 && (c.ai || rand() < 0.42)) {
+    if (targets.length && c.soldiers > 400 && c.rice > 60 && (c.ai || rand() < 0.48)) {
       const t = pick(rand, targets);
       const unit = richestTroop(c);
+      const tot = troopTotal(c);
+      const haveType = (c.troops && c.troops[unit]) || 0;
+      const useAll = tot >= 80 && (haveType < 80 || haveType < tot * 0.4 || rand() < 0.62);
+      const send = useAll
+        ? Math.floor(tot * (rand() < 0.5 ? 1 : 0.72))
+        : Math.floor(Math.min(haveType, Math.max(180, tot * 0.55)));
       add(
         cmd("war", pick(rand, ["war-shutsujin", "war-kyoshu", "war-hoi", "war-yashu"]), {
           targetProvince: t.id,
           generalId: (bestGeneral(state, c.id, "valor") || {}).id,
-          soldiers: Math.floor(Math.max(120, (c.troops[unit] || c.soldiers) * 0.28)),
-          unit: unit
+          soldiers: Math.max(80, send),
+          unit: useAll ? "all" : unit
         })
       );
     }
@@ -2780,7 +2811,10 @@ window.GYEngine = (function () {
       }
     }
     if (def.unit || def.soldiers) {
-      if (cmd.unit && !troopDef(cmd.unit)) return "兵種を選んでください。";
+      if (cmd.unit && !isAllForceUnit(cmd.unit) && !troopDef(cmd.unit)) return "兵種を選んでください。";
+    }
+    if (def.id === "war-chohei") {
+      if (isAllForceUnit(cmd.unit) || !cmd.unit) return "徴兵する兵種を選んでください。";
     }
     if (def.id === "war-chohei" && cmd.unit) {
       const tdef = troopDef(cmd.unit);
@@ -2788,10 +2822,14 @@ window.GYEngine = (function () {
         return tdef.name + "の徴兵には金" + (tdef.gold || 0) + "・米" + (tdef.rice || 0) + "がさらに要る。";
       }
     }
-    if (def.soldiers && cmd.unit) {
+    if (def.soldiers) {
       ensureTroops(clan);
-      const have = clan.troops[cmd.unit] || 0;
-      if (have < 80) return troopLabel(cmd.unit) + "が足りない（80以上必要）。";
+      if (isAllForceUnit(cmd.unit)) {
+        if (troopTotal(clan) < 80) return "全兵力でも兵が足りない（80以上必要）。";
+      } else if (cmd.unit) {
+        const have = clan.troops[cmd.unit] || 0;
+        if (have < 80) return troopLabel(cmd.unit) + "が足りない（80以上必要）。";
+      }
     }
     return "";
   }

@@ -153,7 +153,7 @@ window.GY_DATA = (function () {
       { id: "dip-kofuku", name: "降伏勧告", desc: "弱った相手に下るよう勧める。", cost: { gold: 20 }, target: "clan" }
     ],
     war: [
-      { id: "war-shutsujin", name: "出陣", desc: "隣接する敵国へ、選んだ兵種で正規の攻め込み。", cost: { rice: 40 }, target: "province", soldiers: true },
+      { id: "war-shutsujin", name: "出陣", desc: "隣接する敵国へ攻め込む。兵種を選ぶか、全兵力の混成でも出せる。攻める側がやや有利。", cost: { rice: 40 }, target: "province", soldiers: true },
       { id: "war-boe", name: "防衛強化", desc: "守備を固め、今期の防衛を上げる。", cost: { gold: 40, rice: 20 }, target: "province" },
       { id: "war-kyoshu", name: "強襲", desc: "損害を覚悟した一気の突破。", cost: { rice: 30 }, target: "province", soldiers: true },
       { id: "war-hoi", name: "包囲", desc: "城を囲み、守りを削る。", cost: { rice: 50 }, target: "province", soldiers: true },
@@ -161,7 +161,7 @@ window.GY_DATA = (function () {
       { id: "war-kakei", name: "火計", desc: "火を放ち、守兵を乱す。", cost: { gold: 30 }, target: "province", soldiers: true },
       { id: "war-mizuzeme", name: "水攻め", desc: "水を引き、長期の圧迫をかける。", cost: { gold: 80, rice: 30 }, target: "province", soldiers: true },
       { id: "war-hyoro", name: "兵糧攻め", desc: "兵糧を断ち、敵兵と民衆を減らす。", cost: { rice: 20 }, target: "province", soldiers: true },
-      { id: "war-fukuhei", name: "伏兵", desc: "待ち受けて敵の出勢を叩く。", cost: { rice: 25 }, target: "province", soldiers: true },
+      { id: "war-fukuhei", name: "伏兵", desc: "待ち受けて敵の出勢を叩き、攻め手を有利にする。", cost: { rice: 25 }, target: "province", soldiers: true },
       { id: "war-kihei", name: "騎馬突撃", desc: "騎馬の威力で野戦を制する。", cost: { gold: 40, rice: 30 }, target: "province", soldiers: true },
       { id: "war-teppo", name: "鉄砲斉射", desc: "鉄砲隊で防衛を無視して撃つ。", cost: { gold: 90 }, target: "province", soldiers: true },
       { id: "war-chohei", name: "徴兵", desc: "民衆から兵種を選んで募る。足軽は安く多く、騎馬・鉄砲は高く少なく入る。", cost: { gold: 40, rice: 40 }, target: "province", unit: true },

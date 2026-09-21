@@ -10,8 +10,8 @@ let ui = {
   targetProvince: null,
   targetClan: null,
   generalId: null,
-  soldiers: 400,
-  unitType: "ashigaru",
+  soldiers: 0,
+  unitType: "all",
   turnOffset: 0,
   playerCount: 1,
   turnMs: 10 * 60 * 1000,
@@ -56,13 +56,24 @@ function troopMini(clan, rec) {
     .join("　");
 }
 
-function unitSelectHtml(id) {
+function unitSelectHtml(id, opts) {
   const types = D().troopTypes || [];
   const clan = myClan();
+  const allowAll = !!(opts && opts.allowAll);
+  const total = clan ? E().troopTotal(clan) : 0;
+  let cur = ui.unitType || "ashigaru";
+  if (!allowAll && (cur === "all" || cur === "mix")) cur = "ashigaru";
   return (
     '<label class="field">兵種<select id="' +
     id +
     '">' +
+    (allowAll
+      ? '<option value="all"' +
+        (cur === "all" || cur === "mix" ? " selected" : "") +
+        ">全兵力（混成 " +
+        fmt(total) +
+        "）</option>"
+      : "") +
     types
       .map((t) => {
         const n = clan && clan.troops ? clan.troops[t.id] || 0 : 0;
@@ -71,7 +82,7 @@ function unitSelectHtml(id) {
           "<option value=\"" +
           t.id +
           "\"" +
-          (ui.unitType === t.id ? " selected" : "") +
+          (cur === t.id ? " selected" : "") +
           ">" +
           t.name +
           "（" +
@@ -1283,7 +1294,7 @@ function cmdHelpBody(id) {
   const cat = (D().catLabels && D().catLabels[found.cat]) || found.cat;
   let extra = "";
   if (found.cat === "culture") extra += "<p>文化度は一度で大きくは動かない。高く積もるほどお恵み・来訪・お宝が寄りやすく、天災は避けやすい。勝利条件ではない。</p>";
-  if (c.soldiers) extra += "<p>出兵数と兵種を指定し、隣接する敵領へ向かう。</p>";
+  if (c.soldiers) extra += "<p>出兵数と兵種を指定し、隣接する敵領へ向かう。兵種で「全兵力」を選ぶか、全兵力ボタンを押せば、家中の兵をすべて混成で出せる。攻める側がやや有利。</p>";
   if (c.unit) extra += "<p>兵種を選ぶ。追加の金米と募れる人数は兵種で異なる。</p>";
   if (c.soldiers || c.unit) {
     extra +=
@@ -1855,6 +1866,21 @@ function cmdPanel() {
         .slice(0, 40)
     : [];
   const others = state.clans.filter((c) => c.alive && (!clan || c.id !== clan.id));
+  if (found && found.def.id === "war-chohei" && (ui.unitType === "all" || ui.unitType === "mix")) ui.unitType = "ashigaru";
+  const troopMax = clan ? E().troopTotal(clan) : 0;
+  const allForce0 = ui.unitType === "all" || ui.unitType === "mix";
+  const typeHave0 = clan && clan.troops && ui.unitType && !allForce0 ? clan.troops[ui.unitType] || 0 : troopMax;
+  if (found && found.def.soldiers && !allForce0 && typeHave0 < 80 && troopMax >= 80) {
+    ui.unitType = "all";
+    ui.soldiers = troopMax;
+  }
+  const allForce = ui.unitType === "all" || ui.unitType === "mix";
+  const typeMax = clan && clan.troops && ui.unitType && !allForce ? clan.troops[ui.unitType] || 0 : troopMax;
+  const sendMax = allForce ? Math.max(80, troopMax) : Math.max(0, typeMax);
+  if (found && found.def.soldiers) {
+    if (ui.soldiers > sendMax) ui.soldiers = sendMax;
+    if (allForce && troopMax >= 80 && ui.soldiers < 80) ui.soldiers = troopMax;
+  }
   return (
     '<div class="tabs">' +
     Object.keys(cats)
@@ -1884,7 +1910,7 @@ function cmdPanel() {
       ? "<div class=\"tiny\">対象: " +
         (found.def.target === "province" ? "地図の国をクリック" : found.def.target === "clan" ? "相手家を選択" : "なし") +
         (found.def.id === "dip-konin" ? " ／ 縁組する姫を選ぶ" : "") +
-        (found.def.soldiers ? " ／ 出兵数と兵種を指定" : "") +
+        (found.def.soldiers ? " ／ 出兵数と兵種（全兵力可）" : "") +
         (found.def.unit ? " ／ 兵種を選ぶ" : "") +
         "</div>"
       : "<div class=\"tiny\">方針を選び、対象と担当武将を決めて予約する。</div>") +
@@ -1933,9 +1959,16 @@ function cmdPanel() {
         "</select></label>"
       : "") +
     (found && found.def.soldiers
-      ? '<label class="field">出兵<input id="sold" type="number" min="80" step="20" value="' + ui.soldiers + '"></label>'
+      ? '<label class="field">出兵<input id="sold" type="number" min="80" max="' +
+        sendMax +
+        '" step="20" value="' +
+        ui.soldiers +
+        '"></label>' +
+        '<button type="button" class="btn ghost" id="btn-allforce">全兵力</button>'
       : "") +
-    (found && (found.def.soldiers || found.def.unit) ? unitSelectHtml("unit") : "") +
+    (found && (found.def.soldiers || found.def.unit)
+      ? unitSelectHtml("unit", { allowAll: !!found.def.soldiers })
+      : "") +
     "</div>" +
     '<div class="row" style="margin-top:8px">' +
     '<button class="btn gold" id="btn-queue">この期に予約</button>' +
@@ -3480,9 +3513,31 @@ function bindGame() {
     tc.onchange = () => (ui.targetClan = tc.value);
   }
   const sold = $("#sold");
-  if (sold) sold.onchange = () => (ui.soldiers = Number(sold.value) || 400);
+  if (sold) {
+    sold.onchange = () => {
+      const n = Number(sold.value) || 80;
+      const max = Number(sold.max) || n;
+      ui.soldiers = Math.max(80, Math.min(max, n));
+    };
+  }
+  const allForceBtn = $("#btn-allforce");
+  if (allForceBtn) {
+    allForceBtn.onclick = () => {
+      const c = myClan();
+      ui.unitType = "all";
+      ui.soldiers = c ? E().troopTotal(c) : 80;
+      render();
+    };
+  }
   const unitEl = $("#unit");
-  if (unitEl) unitEl.onchange = () => (ui.unitType = unitEl.value || "ashigaru");
+  if (unitEl) {
+    unitEl.onchange = () => {
+      ui.unitType = unitEl.value || "ashigaru";
+      const c = myClan();
+      if ((ui.unitType === "all" || ui.unitType === "mix") && c) ui.soldiers = E().troopTotal(c);
+      render();
+    };
+  }
   const bq = $("#btn-queue");
   if (bq) {
     bq.onclick = () => {
