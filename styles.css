@@ -18,16 +18,21 @@ html, body {
   font-family: "Shippori Mincho", "Yu Mincho", "Hiragino Mincho ProN", serif;
   overflow-anchor: none;
 }
-html.in-game,
+html.in-game {
+  height: auto;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
 html.in-game body {
-  height: 100%;
-  max-height: 100%;
-  overflow: hidden;
+  height: auto;
+  max-height: none;
+  overflow: visible;
 }
 html.in-game #app {
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
 }
 button, input, select {
   font-family: inherit;
@@ -127,8 +132,7 @@ button { cursor: pointer; }
 .player-card.pc { opacity: 0.88; border-style: dashed; }
 
 .hud {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: block;
   min-height: 100vh;
   min-height: 100dvh;
   background:
@@ -136,9 +140,10 @@ button { cursor: pointer; }
     url("assets/sakura.jpg") center/cover fixed;
 }
 html.in-game .hud {
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: visible;
 }
 .topbar {
   display: grid;
@@ -196,30 +201,31 @@ html.in-game .hud {
   grid-template-columns: minmax(0, 1.78fr) minmax(300px, 0.78fr);
   gap: 8px;
   padding: 8px;
-  min-height: 0;
+  align-items: start;
 }
-html.in-game .layout { overflow: hidden; }
+html.in-game .layout { overflow: visible; }
 .map-col {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) minmax(132px, 0.26fr);
+  grid-template-rows: auto auto;
   gap: 8px;
-  min-height: 0;
+  min-width: 0;
 }
 html.in-game .map-col {
-  height: 100%;
-  min-height: 0;
+  height: auto;
 }
 .map-wrap {
   background: var(--sea);
   border: 1px solid var(--gold);
   position: relative;
   overflow: hidden;
-  min-height: 560px;
+  width: 100%;
+  aspect-ratio: 900 / 640;
+  min-height: 672px;
 }
 .map-wrap svg { width: 100%; height: 100%; display: block; }
 html.in-game .map-wrap {
-  min-height: 0;
-  height: 100%;
+  min-height: 672px;
+  height: auto;
 }
 html.in-game .map-wrap svg {
   position: absolute;
@@ -229,7 +235,7 @@ html.in-game .map-wrap svg {
 }
 html.in-game .side {
   min-height: 0;
-  overflow: auto;
+  overflow: visible;
 }
 .res.troop-frame {
   cursor: help;
@@ -371,13 +377,13 @@ html.in-game .side {
   background: rgba(0,0,0,.55);
   padding: 6px 8px;
   font-size: 11px;
-  max-height: 180px;
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
 }
 
 .side {
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   min-height: 0;
 }
@@ -393,8 +399,8 @@ html.in-game .side {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
-  max-height: 220px;
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
 }
 .cmd {
   text-align: left;
@@ -415,8 +421,8 @@ html.in-game .side {
 }
 
 .queue {
-  overflow: auto;
-  max-height: 220px;
+  overflow: visible;
+  max-height: none;
   font-size: 12px;
 }
 .q-row {
@@ -429,7 +435,7 @@ html.in-game .side {
 
 .log-wrap {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
   min-height: 0;
   background: rgba(0,0,0,.45);
   border: 1px solid var(--line);
@@ -444,7 +450,7 @@ html.in-game .side {
 .log {
   height: auto;
   min-height: 0;
-  overflow: auto;
+  overflow: visible;
   margin: 0;
   background: transparent;
   border: none;
@@ -714,12 +720,13 @@ button:disabled { opacity: 0.4; cursor: default; }
   .topbar { grid-template-columns: 1fr; }
   .timer-box { text-align: left; }
   .player-card { grid-template-columns: 1fr 1fr; }
-  html.in-game .layout { overflow: auto; }
+  html.in-game .layout { overflow: visible; }
   .map-col {
-    grid-template-rows: minmax(320px, 62vh) minmax(120px, 24vh);
+    grid-template-rows: auto auto;
   }
-  html.in-game .map-wrap {
-    min-height: 320px;
-    height: min(62vh, 560px);
+  html.in-game .map-wrap,
+  .map-wrap {
+    min-height: 384px;
+    height: auto;
   }
 }

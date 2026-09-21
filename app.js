@@ -2792,20 +2792,12 @@ function setPlayChrome() {
 
 function pinPlayView() {
   if (ui.screen !== "game") return;
-  const layY = ui.playScroll || 0;
+  const y = ui.playScroll || 0;
   const apply = () => {
     if (ui.screen !== "game") return;
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-    const app = $("#app");
-    if (app) app.scrollTop = 0;
-    const hud = document.querySelector(".hud");
-    if (hud) hud.scrollTop = 0;
-    const map = $("#map");
-    if (map) map.scrollTop = 0;
-    const lay = document.querySelector(".layout");
-    if (lay) lay.scrollTop = layY;
+    window.scrollTo(0, y);
+    document.documentElement.scrollTop = y;
+    document.body.scrollTop = y;
   };
   apply();
   requestAnimationFrame(apply);
@@ -2879,8 +2871,7 @@ function render() {
   const enteringGame = ui.screen === "game" && !document.querySelector(".hud");
   if (ui.screen === "title") saveRosterScroll();
   else if (!enteringGame) {
-    const lay = document.querySelector(".layout");
-    if (lay) ui.playScroll = lay.scrollTop;
+    ui.playScroll = window.scrollY || document.documentElement.scrollTop || 0;
   }
   const keep = {
     log: $(".log") && $(".log").scrollTop,
