@@ -153,7 +153,7 @@ window.GY_DATA = (function () {
       { id: "dip-kofuku", name: "降伏勧告", desc: "弱った相手に下るよう勧める。", cost: { gold: 20 }, target: "clan" }
     ],
     war: [
-      { id: "war-shutsujin", name: "出陣", desc: "隣接する敵国へ攻め込む。兵種を選ぶか、全兵力の混成でも出せる。攻める側がやや有利。", cost: { rice: 40 }, target: "province", soldiers: true },
+      { id: "war-shutsujin", name: "出陣", desc: "隣接する敵国へ攻め込む。兵種を選ぶか、全兵力の混成でも出せる。守りの厚い国は落ちにくい。", cost: { rice: 40 }, target: "province", soldiers: true },
       { id: "war-boe", name: "防衛強化", desc: "守備を固め、今期の防衛を上げる。", cost: { gold: 40, rice: 20 }, target: "province" },
       { id: "war-kyoshu", name: "強襲", desc: "損害を覚悟した一気の突破。", cost: { rice: 30 }, target: "province", soldiers: true },
       { id: "war-hoi", name: "包囲", desc: "城を囲み、守りを削る。", cost: { rice: 50 }, target: "province", soldiers: true },

@@ -1294,7 +1294,7 @@ function cmdHelpBody(id) {
   const cat = (D().catLabels && D().catLabels[found.cat]) || found.cat;
   let extra = "";
   if (found.cat === "culture") extra += "<p>文化度は一度で大きくは動かない。高く積もるほどお恵み・来訪・お宝が寄りやすく、天災は避けやすい。勝利条件ではない。</p>";
-  if (c.soldiers) extra += "<p>出兵数と兵種を指定し、隣接する敵領へ向かう。兵種で「全兵力」を選ぶか、全兵力ボタンを押せば、家中の兵をすべて混成で出せる。攻める側がやや有利。</p>";
+  if (c.soldiers) extra += "<p>出兵数と兵種を指定し、隣接する敵領へ向かう。兵種で「全兵力」を選ぶか、全兵力ボタンを押せば、家中の兵をすべて混成で出せる。守りが厚いと落ちにくい。</p>";
   if (c.unit) extra += "<p>兵種を選ぶ。追加の金米と募れる人数は兵種で異なる。</p>";
   if (c.soldiers || c.unit) {
     extra +=
